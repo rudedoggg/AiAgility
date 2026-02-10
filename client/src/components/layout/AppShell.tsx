@@ -12,10 +12,10 @@ interface AppShellProps {
 
 export function AppShell({ children, sidebarContent, sidebarTitle }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
+    <div className="h-screen w-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
       <Header />
-      <div className="flex-1 pt-[60px] h-screen overflow-hidden">
-         <ResizablePanelGroup direction="horizontal">
+      <div className="flex-1 pt-[60px] h-full overflow-hidden w-full">
+         <ResizablePanelGroup direction="horizontal" className="h-full w-full">
             {/* Unified Left Sidebar */}
             <ResizablePanel defaultSize={20} minSize={15} maxSize={25} className="bg-sidebar border-r flex flex-col h-full">
                 {/* Top Section: Navigation / Buckets */}
