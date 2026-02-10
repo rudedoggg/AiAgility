@@ -1,0 +1,45 @@
+// Types for the application state
+
+export type Message = {
+  id: string;
+  role: 'user' | 'ai';
+  content: string;
+  timestamp: string;
+  hasSaveableContent?: boolean; // For the [Paperclip] push mechanic
+  saved?: boolean;
+};
+
+export type Section = {
+  id: string;
+  genericName: string;
+  subtitle: string;
+  completeness: number; // 0-100
+  totalItems: number;
+  completedItems: number;
+  content?: string;
+  isOpen?: boolean;
+};
+
+export type BucketItem = {
+  id: string;
+  type: 'doc' | 'link' | 'chat' | 'note';
+  title: string;
+  preview: string;
+  date: string;
+};
+
+export type Bucket = {
+  id: string;
+  name: string;
+  items: BucketItem[];
+  isOpen?: boolean;
+};
+
+export type Deliverable = {
+  id: string;
+  title: string;
+  status: 'draft' | 'review' | 'final';
+  lastEdited: string;
+  content: string;
+  engaged: boolean; // Whether AI engages with this
+};
