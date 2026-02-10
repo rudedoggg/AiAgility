@@ -15,9 +15,9 @@ export function Header() {
     <header className="h-[60px] border-b bg-background flex items-center justify-between px-6 fixed top-0 w-full z-50">
       <div className="flex items-center gap-2 font-bold text-lg tracking-tight font-heading">
         <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground">
-          D
+          A
         </div>
-        <span>DecisionScaffold</span>
+        <span>AgilityAI</span>
       </div>
 
       <nav className="flex items-center bg-muted/50 p-1 rounded-lg">
