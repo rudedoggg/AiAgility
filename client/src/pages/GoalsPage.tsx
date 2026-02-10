@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages, mockSections } from "@/lib/mockData";
 import { Message, Section } from "@/lib/types";
-import { ChevronRight, Target, Flag, Users, AlertTriangle, Circle } from "lucide-react";
+import { ChevronRight, Target, Flag, Users, AlertTriangle, Circle, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ResizableHandle,
@@ -11,23 +11,23 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { motion, AnimatePresence } from "framer-motion";
 
 function getSectionIcon(id: string) {
     switch (id) {
-        case 'context': return <Flag className="w-4 h-4" />;
-        case 'objective': return <Target className="w-4 h-4" />;
-        case 'stakeholders': return <Users className="w-4 h-4" />;
-        case 'constraints': return <AlertTriangle className="w-4 h-4" />;
-        default: return <Circle className="w-4 h-4" />;
+        case 'context': return <Flag className="w-3.5 h-3.5" />;
+        case 'objective': return <Target className="w-3.5 h-3.5" />;
+        case 'stakeholders': return <Users className="w-3.5 h-3.5" />;
+        case 'constraints': return <AlertTriangle className="w-3.5 h-3.5" />;
+        default: return <Circle className="w-3.5 h-3.5" />;
     }
 }
 
 export default function GoalsPage() {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
   const [sections, setSections] = useState<Section[]>(mockSections);
-  const [activeSectionId, setActiveSectionId] = useState<string>('context');
-
-  const activeSection = sections.find(s => s.id === activeSectionId);
+  const sectionRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
 
   const handleSendMessage = (content: string) => {
     const newMessage: Message = {
@@ -51,28 +51,36 @@ export default function GoalsPage() {
     }, 1000);
   };
 
+  const toggleSection = (id: string) => {
+      setSections(prev => prev.map(s => s.id === id ? { ...s, isOpen: !s.isOpen } : s));
+  };
+
+  const scrollToSection = (id: string) => {
+      // First ensure it's open
+      setSections(prev => prev.map(s => s.id === id ? { ...s, isOpen: true } : s));
+      // Then scroll
+      setTimeout(() => {
+          sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+  };
+
   const SidebarContent = (
-      <div className="space-y-0.5">
+      <div className="space-y-0">
           {sections.map(section => (
               <div 
                   key={section.id}
-                  onClick={() => setActiveSectionId(section.id)}
+                  onClick={() => scrollToSection(section.id)}
                   className={cn(
-                      "flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-sm cursor-pointer transition-colors border-l-2",
-                      activeSectionId === section.id 
-                          ? "bg-sidebar-accent border-primary text-foreground" 
-                          : "border-transparent text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
+                      "flex items-center gap-2 px-3 py-2 text-sm font-medium border-l-2 cursor-pointer transition-colors hover:bg-sidebar-accent/50",
+                      "border-transparent text-muted-foreground hover:text-foreground"
                   )}
               >
                   {getSectionIcon(section.id)}
-                  <div className="flex flex-col truncate">
-                    <span className="truncate leading-none mb-0.5">{section.genericName}</span>
-                    <span className="text-[10px] font-normal opacity-70 truncate">{section.subtitle}</span>
-                  </div>
+                  <span className="truncate">{section.genericName}</span>
               </div>
           ))}
           
-          <Button variant="ghost" size="sm" className="w-full justify-start px-3 mt-4 text-xs text-muted-foreground hover:text-primary">
+          <Button variant="ghost" size="sm" className="w-full justify-start px-3 mt-2 text-xs text-muted-foreground hover:text-primary">
               + Add Goal Section
           </Button>
       </div>
@@ -92,43 +100,66 @@ export default function GoalsPage() {
         
         <ResizableHandle withHandle />
 
-        {/* Bottom: Active Goal Content */}
+        {/* Bottom: All Goal Sections */}
         <ResizablePanel defaultSize={60} className="bg-background">
-            <div className="h-full flex flex-col">
-                {activeSection ? (
-                    <>
-                        <div className="px-6 py-4 border-b bg-muted/5 flex items-center justify-between">
-                            <div>
-                                <h2 className="text-lg font-heading font-bold text-foreground flex items-center gap-2">
-                                    {activeSection.genericName}
-                                    <span className="text-muted-foreground font-normal text-sm px-2 py-0.5 bg-muted rounded-full">
-                                        {activeSection.subtitle}
-                                    </span>
-                                </h2>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span className="font-medium text-foreground">{activeSection.completeness}%</span> Complete
-                            </div>
-                        </div>
-                        <div className="flex-1 overflow-auto p-8">
-                             <div className="prose prose-sm max-w-3xl text-foreground">
-                                {activeSection.content ? (
-                                    <p className="whitespace-pre-wrap leading-relaxed">{activeSection.content}</p>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg bg-muted/10">
-                                        <p>No content defined for this goal yet.</p>
-                                        <Button variant="link" className="mt-2 text-primary">Generate draft with AI</Button>
+            <ScrollArea className="h-full">
+                <div className="flex flex-col divide-y divide-border/60">
+                    {sections.map(section => (
+                        <div key={section.id} ref={el => { if (el) sectionRefs.current[section.id] = el; }} className="bg-background">
+                            <div 
+                                className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-muted/5 transition-colors group"
+                                onClick={() => toggleSection(section.id)}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <div className={cn("text-muted-foreground transition-transform duration-200", section.isOpen ? "rotate-90" : "")}>
+                                        <ChevronRight className="w-4 h-4" />
                                     </div>
+                                    <h2 className="text-sm font-bold text-foreground font-heading">{section.genericName}</h2>
+                                    <span className="text-sm text-muted-foreground font-normal px-2">—</span>
+                                    <span className="text-sm text-muted-foreground">{section.subtitle}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-primary/80" 
+                                            style={{ width: `${section.completeness}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <AnimatePresence initial={false}>
+                                {section.isOpen && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        <div className="px-12 pb-8 pt-2">
+                                             <div className="prose prose-sm max-w-4xl text-foreground">
+                                                {section.content ? (
+                                                    <p className="whitespace-pre-wrap leading-relaxed text-sm">{section.content}</p>
+                                                ) : (
+                                                    <div className="py-4 text-sm text-muted-foreground italic">
+                                                        No content yet. Ask AI to draft this section.
+                                                    </div>
+                                                )}
+                                             </div>
+                                        </div>
+                                    </motion.div>
                                 )}
-                             </div>
+                            </AnimatePresence>
                         </div>
-                    </>
-                ) : (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
-                        Select a goal section to view details
+                    ))}
+                    
+                    <div className="p-8 text-center">
+                        <Button variant="outline" className="text-muted-foreground border-dashed">
+                            Add New Goal Section
+                        </Button>
                     </div>
-                )}
-            </div>
+                </div>
+            </ScrollArea>
         </ResizablePanel>
       </ResizablePanelGroup>
     </AppShell>
