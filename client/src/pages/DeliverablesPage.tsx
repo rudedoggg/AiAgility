@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
+import { SummaryCard } from "@/components/shared/SummaryCard";
 
 export default function DeliverablesPage() {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
@@ -68,8 +69,16 @@ export default function DeliverablesPage() {
          
          <ResizableHandle withHandle />
          
+
          <ResizablePanel defaultSize={70} className="bg-background">
              <ScrollArea className="h-full">
+                 <SummaryCard 
+                    title="Deliverables Status"
+                    status="Drafting phase. Board Memo is in progress. Commute analysis requires data."
+                    done={["Board Memo structure created"]}
+                    undone={["Commute analysis data input", "Final review of Memo"]}
+                    nextSteps={["Complete Commute Analysis", "Draft Executive Summary"]}
+                />
                  <div className="flex flex-col divide-y divide-border/60">
                     {deliverables.map(doc => (
                         <div key={doc.id} ref={el => { if (el) deliverableRefs.current[doc.id] = el; }}>

@@ -9,6 +9,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
+import { SummaryCard } from "@/components/shared/SummaryCard";
 
 export default function LabPage() {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
@@ -57,8 +58,16 @@ export default function LabPage() {
          
          <ResizableHandle withHandle />
          
+
          <ResizablePanel defaultSize={55} className="bg-background">
              <ScrollArea className="h-full">
+                <SummaryCard 
+                    title="Lab Status"
+                    status="Research phase active. Market data is well-populated, but stakeholder feedback is sparse."
+                    done={["Collected market reports", "Competitor analysis linked"]}
+                    undone={["Employee survey pending", "CEO interview notes missing"]}
+                    nextSteps={["Import survey results", "Schedule CEO interview"]}
+                />
                 <div className="flex flex-col divide-y divide-border/60">
                     {buckets.map(bucket => (
                         <div key={bucket.id} ref={el => { if (el) bucketRefs.current[bucket.id] = el; }}>

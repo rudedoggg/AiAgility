@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
+import { SummaryCard } from "@/components/shared/SummaryCard";
 
 function getSectionIcon(id: string) {
     switch (id) {
@@ -100,9 +101,17 @@ export default function GoalsPage() {
         
         <ResizableHandle withHandle />
 
+
         {/* Bottom: All Goal Sections */}
         <ResizablePanel defaultSize={60} className="bg-background">
             <ScrollArea className="h-full">
+                <SummaryCard 
+                    title="Goals Status"
+                    status="Goals are currently 60% defined. The primary objective is clear, but constraints need specific financial limits."
+                    done={["Context defined", "Objective drafted"]}
+                    undone={["Stakeholder list incomplete", "Financial constraints undefined"]}
+                    nextSteps={["Review financial constraints", "Confirm stakeholder list with CEO"]}
+                />
                 <div className="flex flex-col divide-y divide-border/60">
                     {sections.map(section => (
                         <div key={section.id} ref={el => { if (el) sectionRefs.current[section.id] = el; }} className="bg-background">
