@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, Paperclip, Mic, ArrowUp } from "lucide-react";
+import { Send, Paperclip, ArrowUp, User, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Tooltip,
   TooltipContent,
@@ -49,55 +49,60 @@ export function ChatWorkspace({ messages, onSendMessage, onSaveContent, classNam
 
   return (
     <div className={cn("flex flex-col h-full bg-background relative", className)}>
-      <ScrollArea className="flex-1 px-4 py-6" ref={scrollRef}>
-        <div className="max-w-3xl mx-auto space-y-6">
-          {messages.map((msg) => (
+      <ScrollArea className="flex-1" ref={scrollRef}>
+        <div className="flex flex-col">
+          {messages.map((msg, index) => (
             <div
               key={msg.id}
               className={cn(
-                "flex gap-4 group",
-                msg.role === "user" ? "flex-row-reverse" : "flex-row"
+                "group px-6 py-4 border-b border-border/50 hover:bg-muted/10 transition-colors flex gap-4",
+                msg.role === "ai" ? "bg-muted/5" : "bg-background"
               )}
             >
               <div
                 className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-medium",
+                  "w-6 h-6 rounded flex items-center justify-center shrink-0 mt-0.5",
                   msg.role === "ai"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
+                    ? "text-primary"
+                    : "text-muted-foreground"
                 )}
               >
-                {msg.role === "ai" ? "AI" : "You"}
+                {msg.role === "ai" ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
               </div>
-              <div
-                className={cn(
-                  "relative max-w-[85%] rounded-2xl px-5 py-3 text-[15px] leading-relaxed",
-                  msg.role === "user"
-                    ? "bg-muted/50 text-foreground"
-                    : "bg-transparent text-foreground pl-0"
-                )}
-              >
-                <div className="whitespace-pre-wrap">{msg.content}</div>
-                
-                {msg.hasSaveableContent && !msg.saved && (
+              
+              <div className="flex-1 min-w-0 space-y-2">
+                 <div className="flex items-baseline justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        {msg.role === "ai" ? "AI Assistant" : "You"}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                        {msg.timestamp}
+                    </span>
+                 </div>
+                 
+                 <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground font-normal">
+                    {msg.content}
+                 </div>
+
+                 {msg.hasSaveableContent && !msg.saved && (
                    <motion.div 
-                     initial={{ opacity: 0, scale: 0.9 }}
-                     animate={{ opacity: 1, scale: 1 }}
-                     className="mt-2 inline-flex"
+                     initial={{ opacity: 0 }}
+                     animate={{ opacity: 1 }}
+                     className="pt-2"
                    >
                      <Tooltip>
                        <TooltipTrigger asChild>
                          <Button 
                            variant="outline" 
                            size="sm" 
-                           className="h-7 text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors font-medium"
+                           className="h-6 text-[10px] gap-1.5 px-2 text-primary border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors font-medium rounded-sm"
                            onClick={() => onSaveContent?.(msg.id)}
                          >
                            <Paperclip className="w-3 h-3" />
                            Save to Project
                          </Button>
                        </TooltipTrigger>
-                       <TooltipContent>
+                       <TooltipContent side="right">
                          <p>Save this content to your Lab?</p>
                        </TooltipContent>
                      </Tooltip>
@@ -110,28 +115,25 @@ export function ChatWorkspace({ messages, onSendMessage, onSaveContent, classNam
       </ScrollArea>
 
       <div className="p-4 bg-background border-t">
-        <div className="max-w-3xl mx-auto relative">
+        <div className="relative">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
-            className="min-h-[50px] max-h-[200px] resize-none pr-12 py-3 bg-muted/30 border-muted-foreground/20 focus-visible:ring-1 focus-visible:ring-primary/50 shadow-sm rounded-xl"
+            className="min-h-[44px] max-h-[200px] resize-none pr-10 py-2.5 bg-background border-input focus-visible:ring-1 focus-visible:ring-primary shadow-sm rounded-md text-sm"
           />
-          <div className="absolute right-2 bottom-2.5 flex gap-1">
+          <div className="absolute right-2 bottom-1.5">
              <Button 
                size="icon" 
-               variant={input.trim() ? "default" : "ghost"}
-               className={cn("h-8 w-8 transition-all", input.trim() ? "bg-primary text-primary-foreground" : "text-muted-foreground")}
+               variant="ghost"
+               className={cn("h-7 w-7 transition-all rounded-sm", input.trim() ? "text-primary hover:text-primary hover:bg-primary/10" : "text-muted-foreground")}
                onClick={handleSend}
                disabled={!input.trim()}
              >
                <ArrowUp className="w-4 h-4" />
              </Button>
           </div>
-        </div>
-        <div className="text-center mt-2 text-xs text-muted-foreground">
-            AI can make mistakes. Please use judgment.
         </div>
       </div>
     </div>
