@@ -117,7 +117,7 @@ export default function DeliverablesPage() {
                                     >
                                         <div className="flex h-[500px] border-t border-border/50">
                                             {/* Left Content: Document */}
-                                            <div className="flex-1 px-12 pb-8 pt-6 overflow-y-auto">
+                                            <div className="w-[80%] px-12 pb-8 pt-6 overflow-y-auto border-r border-border/50">
                                                 <article className="prose prose-sm max-w-none prose-headings:font-heading prose-headings:font-bold prose-h1:text-xl prose-h2:text-base prose-p:text-muted-foreground prose-p:leading-relaxed">
                                                     {/* Quick markdown rendering simulation */}
                                                     {doc.content.split('\n').map((line, i) => {
@@ -130,7 +130,7 @@ export default function DeliverablesPage() {
                                             </div>
 
                                             {/* Right Content: History */}
-                                            <div className="w-[280px] border-l bg-muted/5">
+                                            <div className="w-[20%] bg-muted/5">
                                                 <ScopedHistory />
                                             </div>
                                         </div>

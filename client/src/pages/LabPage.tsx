@@ -96,7 +96,7 @@ export default function LabPage() {
                                     >
                                         <div className="flex h-[400px] border-t border-border/50">
                                             {/* Left Content: Items */}
-                                            <div className="flex-1 px-6 pb-6 pt-0 overflow-y-auto">
+                                            <div className="w-[80%] px-6 pb-6 pt-0 overflow-y-auto border-r border-border/50">
                                                 <div className="divide-y divide-border/30 border-t border-border/30">
                                                     {bucket.items.map(item => (
                                                         <div key={item.id} className="group flex items-start gap-3 py-3 hover:bg-muted/5 transition-colors cursor-pointer px-6 -mx-6">
@@ -124,7 +124,7 @@ export default function LabPage() {
                                             </div>
 
                                             {/* Right Content: History */}
-                                            <div className="w-[280px] border-l bg-muted/5">
+                                            <div className="w-[20%] bg-muted/5">
                                                 <ScopedHistory />
                                             </div>
                                         </div>

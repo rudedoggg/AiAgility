@@ -147,7 +147,7 @@ export default function GoalsPage() {
                                     >
                                         <div className="flex h-[400px] border-t border-border/50">
                                             {/* Left Content Column */}
-                                            <div className="flex-1 p-8 overflow-y-auto">
+                                            <div className="w-[80%] p-8 overflow-y-auto border-r border-border/50">
                                                  <div className="prose prose-sm max-w-none text-foreground">
                                                     {section.content ? (
                                                         <p className="whitespace-pre-wrap leading-relaxed text-sm">{section.content}</p>
@@ -160,7 +160,7 @@ export default function GoalsPage() {
                                             </div>
                                             
                                             {/* Right History Column */}
-                                            <div className="w-[280px] border-l bg-muted/5">
+                                            <div className="w-[20%] bg-muted/5">
                                                 <ScopedHistory />
                                             </div>
                                         </div>
