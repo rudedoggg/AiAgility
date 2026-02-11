@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import { SummaryCard } from "@/components/shared/SummaryCard";
+import { ScopedHistory } from "@/components/shared/ScopedHistory";
 
 function getSectionIcon(id: string) {
     switch (id) {
@@ -144,16 +145,24 @@ export default function GoalsPage() {
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.2 }}
                                     >
-                                        <div className="px-12 pb-8 pt-2">
-                                             <div className="prose prose-sm max-w-4xl text-foreground">
-                                                {section.content ? (
-                                                    <p className="whitespace-pre-wrap leading-relaxed text-sm">{section.content}</p>
-                                                ) : (
-                                                    <div className="py-4 text-sm text-muted-foreground italic">
-                                                        No content yet. Ask AI to draft this section.
-                                                    </div>
-                                                )}
-                                             </div>
+                                        <div className="flex h-[400px] border-t border-border/50">
+                                            {/* Left Content Column */}
+                                            <div className="flex-1 p-8 overflow-y-auto">
+                                                 <div className="prose prose-sm max-w-none text-foreground">
+                                                    {section.content ? (
+                                                        <p className="whitespace-pre-wrap leading-relaxed text-sm">{section.content}</p>
+                                                    ) : (
+                                                        <div className="py-4 text-sm text-muted-foreground italic">
+                                                            No content yet. Ask AI to draft this section.
+                                                        </div>
+                                                    )}
+                                                 </div>
+                                            </div>
+                                            
+                                            {/* Right History Column */}
+                                            <div className="w-[280px] border-l bg-muted/5">
+                                                <ScopedHistory />
+                                            </div>
                                         </div>
                                     </motion.div>
                                 )}

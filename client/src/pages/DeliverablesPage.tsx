@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import { SummaryCard } from "@/components/shared/SummaryCard";
+import { ScopedHistory } from "@/components/shared/ScopedHistory";
 
 export default function DeliverablesPage() {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
@@ -114,16 +115,24 @@ export default function DeliverablesPage() {
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.2 }}
                                     >
-                                        <div className="px-12 pb-8 pt-2">
-                                            <article className="prose prose-sm max-w-none prose-headings:font-heading prose-headings:font-bold prose-h1:text-xl prose-h2:text-base prose-p:text-muted-foreground prose-p:leading-relaxed">
-                                                {/* Quick markdown rendering simulation */}
-                                                {doc.content.split('\n').map((line, i) => {
-                                                    if (line.startsWith('# ')) return <h1 key={i} className="mb-4">{line.replace('# ', '')}</h1>
-                                                    if (line.startsWith('## ')) return <h2 key={i} className="mt-6 mb-2 text-foreground">{line.replace('## ', '')}</h2>
-                                                    if (line.match(/^\d\./)) return <div key={i} className="ml-4 font-medium text-foreground py-1">{line}</div>
-                                                    return <p key={i} className="my-2 text-sm">{line}</p>
-                                                })}
-                                            </article>
+                                        <div className="flex h-[500px] border-t border-border/50">
+                                            {/* Left Content: Document */}
+                                            <div className="flex-1 px-12 pb-8 pt-6 overflow-y-auto">
+                                                <article className="prose prose-sm max-w-none prose-headings:font-heading prose-headings:font-bold prose-h1:text-xl prose-h2:text-base prose-p:text-muted-foreground prose-p:leading-relaxed">
+                                                    {/* Quick markdown rendering simulation */}
+                                                    {doc.content.split('\n').map((line, i) => {
+                                                        if (line.startsWith('# ')) return <h1 key={i} className="mb-4">{line.replace('# ', '')}</h1>
+                                                        if (line.startsWith('## ')) return <h2 key={i} className="mt-6 mb-2 text-foreground">{line.replace('## ', '')}</h2>
+                                                        if (line.match(/^\d\./)) return <div key={i} className="ml-4 font-medium text-foreground py-1">{line}</div>
+                                                        return <p key={i} className="my-2 text-sm">{line}</p>
+                                                    })}
+                                                </article>
+                                            </div>
+
+                                            {/* Right Content: History */}
+                                            <div className="w-[280px] border-l bg-muted/5">
+                                                <ScopedHistory />
+                                            </div>
                                         </div>
                                     </motion.div>
                                 )}
