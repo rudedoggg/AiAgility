@@ -89,28 +89,28 @@ export default function GoalsPage() {
   );
 
   return (
-    <AppShell sidebarContent={SidebarContent} sidebarTitle="Project Goals">
-      <ResizablePanelGroup direction="vertical" className="h-full">
-        {/* Top: Chat Workspace AND Summary */}
-        <ResizablePanel defaultSize={50} minSize={30} maxSize={70} className="border-b flex flex-col">
-          <SummaryCard 
-              title="Goals Status"
-              status="Goals are currently 60% defined. The primary objective is clear, but constraints need specific financial limits."
-              done={["Context defined", "Objective drafted"]}
-              undone={["Stakeholder list incomplete", "Financial constraints undefined"]}
-              nextSteps={["Review financial constraints", "Confirm stakeholder list with CEO"]}
-          />
-          <ChatWorkspace 
-            messages={messages} 
-            onSendMessage={handleSendMessage}
-            className="flex-1 min-h-0"
-          />
-        </ResizablePanel>
-        
-        <ResizableHandle withHandle />
-
+    <AppShell 
+        navContent={SidebarContent} 
+        navTitle="Project Goals"
+        topRightContent={
+            <div className="flex flex-col h-full">
+                <SummaryCard 
+                    title="Goals Status"
+                    status="Goals are currently 60% defined. The primary objective is clear, but constraints need specific financial limits."
+                    done={["Context defined", "Objective drafted"]}
+                    undone={["Stakeholder list incomplete", "Financial constraints undefined"]}
+                    nextSteps={["Review financial constraints", "Confirm stakeholder list with CEO"]}
+                />
+                <ChatWorkspace 
+                    messages={messages} 
+                    onSendMessage={handleSendMessage}
+                    className="flex-1 min-h-0"
+                />
+            </div>
+        }
+    >
         {/* Bottom: All Goal Sections */}
-        <ResizablePanel defaultSize={50} className="bg-background">
+        <div className="bg-background h-full">
             <ScrollArea className="h-full">
                 <div className="flex flex-col divide-y divide-border/60">
                     {sections.map(section => (
@@ -177,8 +177,7 @@ export default function GoalsPage() {
                     </div>
                 </div>
             </ScrollArea>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        </div>
     </AppShell>
   );
 }

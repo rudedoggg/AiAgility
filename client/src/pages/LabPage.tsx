@@ -51,22 +51,23 @@ export default function LabPage() {
   );
 
   return (
-    <AppShell sidebarContent={SidebarContent} sidebarTitle="Knowledge Buckets">
-      <ResizablePanelGroup direction="vertical">
-         <ResizablePanel defaultSize={45} className="flex flex-col">
-             <SummaryCard 
-                title="Lab Status"
-                status="Research phase active. Market data is well-populated, but stakeholder feedback is sparse."
-                done={["Collected market reports", "Competitor analysis linked"]}
-                undone={["Employee survey pending", "CEO interview notes missing"]}
-                nextSteps={["Import survey results", "Schedule CEO interview"]}
-             />
-             <ChatWorkspace messages={messages} onSendMessage={() => {}} className="flex-1 min-h-0 border-b" />
-         </ResizablePanel>
-         
-         <ResizableHandle withHandle />
-         
-         <ResizablePanel defaultSize={55} className="bg-background">
+    <AppShell 
+        navContent={SidebarContent} 
+        navTitle="Knowledge Buckets"
+        topRightContent={
+            <div className="flex flex-col h-full">
+                 <SummaryCard 
+                    title="Lab Status"
+                    status="Research phase active. Market data is well-populated, but stakeholder feedback is sparse."
+                    done={["Collected market reports", "Competitor analysis linked"]}
+                    undone={["Employee survey pending", "CEO interview notes missing"]}
+                    nextSteps={["Import survey results", "Schedule CEO interview"]}
+                 />
+                 <ChatWorkspace messages={messages} onSendMessage={() => {}} className="flex-1 min-h-0" />
+            </div>
+        }
+    >
+         <div className="bg-background h-full">
              <ScrollArea className="h-full">
                 <div className="flex flex-col divide-y divide-border/60">
                     {buckets.map(bucket => (
@@ -135,8 +136,7 @@ export default function LabPage() {
                     ))}
                 </div>
              </ScrollArea>
-         </ResizablePanel>
-     </ResizablePanelGroup>
+         </div>
     </AppShell>
   );
 }

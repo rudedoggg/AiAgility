@@ -62,22 +62,23 @@ export default function DeliverablesPage() {
   );
 
   return (
-    <AppShell sidebarContent={SidebarContent} sidebarTitle="Deliverables">
-      <ResizablePanelGroup direction="vertical">
-         <ResizablePanel defaultSize={30} minSize={20} className="flex flex-col">
-             <SummaryCard 
-                title="Deliverables Status"
-                status="Drafting phase. Board Memo is in progress. Commute analysis requires data."
-                done={["Board Memo structure created"]}
-                undone={["Commute analysis data input", "Final review of Memo"]}
-                nextSteps={["Complete Commute Analysis", "Draft Executive Summary"]}
-            />
-             <ChatWorkspace messages={messages} onSendMessage={() => {}} className="flex-1 min-h-0 border-b" />
-         </ResizablePanel>
-         
-         <ResizableHandle withHandle />
-         
-         <ResizablePanel defaultSize={70} className="bg-background">
+    <AppShell 
+        navContent={SidebarContent} 
+        navTitle="Deliverables"
+        topRightContent={
+            <div className="flex flex-col h-full">
+                 <SummaryCard 
+                    title="Deliverables Status"
+                    status="Drafting phase. Board Memo is in progress. Commute analysis requires data."
+                    done={["Board Memo structure created"]}
+                    undone={["Commute analysis data input", "Final review of Memo"]}
+                    nextSteps={["Complete Commute Analysis", "Draft Executive Summary"]}
+                />
+                 <ChatWorkspace messages={messages} onSendMessage={() => {}} className="flex-1 min-h-0" />
+            </div>
+        }
+    >
+         <div className="bg-background h-full">
              <ScrollArea className="h-full">
                  <div className="flex flex-col divide-y divide-border/60">
                     {deliverables.map(doc => (
@@ -141,8 +142,7 @@ export default function DeliverablesPage() {
                     ))}
                  </div>
              </ScrollArea>
-         </ResizablePanel>
-     </ResizablePanelGroup>
+         </div>
     </AppShell>
   );
 }
