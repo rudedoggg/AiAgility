@@ -52,22 +52,21 @@ export default function LabPage() {
   return (
     <AppShell sidebarContent={SidebarContent} sidebarTitle="Knowledge Buckets">
       <ResizablePanelGroup direction="vertical">
-         <ResizablePanel defaultSize={45}>
-             <ChatWorkspace messages={messages} onSendMessage={() => {}} className="h-full border-b" />
+         <ResizablePanel defaultSize={45} className="flex flex-col">
+             <SummaryCard 
+                title="Lab Status"
+                status="Research phase active. Market data is well-populated, but stakeholder feedback is sparse."
+                done={["Collected market reports", "Competitor analysis linked"]}
+                undone={["Employee survey pending", "CEO interview notes missing"]}
+                nextSteps={["Import survey results", "Schedule CEO interview"]}
+             />
+             <ChatWorkspace messages={messages} onSendMessage={() => {}} className="flex-1 min-h-0 border-b" />
          </ResizablePanel>
          
          <ResizableHandle withHandle />
          
-
          <ResizablePanel defaultSize={55} className="bg-background">
              <ScrollArea className="h-full">
-                <SummaryCard 
-                    title="Lab Status"
-                    status="Research phase active. Market data is well-populated, but stakeholder feedback is sparse."
-                    done={["Collected market reports", "Competitor analysis linked"]}
-                    undone={["Employee survey pending", "CEO interview notes missing"]}
-                    nextSteps={["Import survey results", "Schedule CEO interview"]}
-                />
                 <div className="flex flex-col divide-y divide-border/60">
                     {buckets.map(bucket => (
                         <div key={bucket.id} ref={el => { if (el) bucketRefs.current[bucket.id] = el; }}>
