@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages, mockDeliverables } from "@/lib/mockData";
 import { Message, Deliverable } from "@/lib/types";
-import { FileText, Download, Share2, CheckSquare, Edit3, ChevronRight } from "lucide-react";
+import { FileText, Download, Share2, CheckSquare, Edit3, ChevronRight, StickyNote, Upload, Link2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
@@ -95,16 +95,61 @@ export default function DeliverablesPage() {
                                     <h2 className="text-sm font-bold font-heading text-foreground">{doc.title}</h2>
                                     <Badge variant="outline" className="text-[10px] h-5 font-normal text-muted-foreground">{doc.status}</Badge>
                                 </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                         <Edit3 className="w-3.5 h-3.5" />
-                                     </Button>
-                                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                         <Share2 className="w-3.5 h-3.5" />
-                                     </Button>
-                                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                                         <Download className="w-3.5 h-3.5" />
-                                     </Button>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            data-testid={`button-note-${doc.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Make a note"
+                                            title="Make a note"
+                                            type="button"
+                                        >
+                                            <StickyNote className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            data-testid={`button-upload-${doc.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Upload a file"
+                                            title="Upload a file"
+                                            type="button"
+                                        >
+                                            <Upload className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            data-testid={`button-link-${doc.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Link a file"
+                                            title="Link a file"
+                                            type="button"
+                                        >
+                                            <Link2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            data-testid={`button-update-${doc.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Update bucket"
+                                            title="Update bucket"
+                                            type="button"
+                                        >
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                             <Edit3 className="w-3.5 h-3.5" />
+                                         </Button>
+                                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                             <Share2 className="w-3.5 h-3.5" />
+                                         </Button>
+                                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                                             <Download className="w-3.5 h-3.5" />
+                                         </Button>
+                                    </div>
                                 </div>
                             </div>
 

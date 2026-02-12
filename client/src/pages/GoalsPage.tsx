@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages, mockSections } from "@/lib/mockData";
 import { Message, Section } from "@/lib/types";
-import { ChevronRight, Target, Flag, Users, AlertTriangle, Circle, ChevronDown } from "lucide-react";
+import { ChevronRight, Target, Flag, Users, AlertTriangle, Circle, ChevronDown, StickyNote, Upload, Link2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ResizableHandle,
@@ -127,12 +127,55 @@ export default function GoalsPage() {
                                     <span className="text-sm text-muted-foreground font-normal px-2">—</span>
                                     <span className="text-sm text-muted-foreground">{section.subtitle}</span>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
                                     <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
                                         <div 
                                             className="h-full bg-primary/80" 
                                             style={{ width: `${section.completeness}%` }}
                                         />
+                                    </div>
+
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            data-testid={`button-note-${section.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Make a note"
+                                            title="Make a note"
+                                            type="button"
+                                        >
+                                            <StickyNote className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            data-testid={`button-upload-${section.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Upload a file"
+                                            title="Upload a file"
+                                            type="button"
+                                        >
+                                            <Upload className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            data-testid={`button-link-${section.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Link a file"
+                                            title="Link a file"
+                                            type="button"
+                                        >
+                                            <Link2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            data-testid={`button-update-${section.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Update bucket"
+                                            title="Update bucket"
+                                            type="button"
+                                        >
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
                                 </div>
                             </div>

@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages, mockBuckets } from "@/lib/mockData";
 import { Message, Bucket } from "@/lib/types";
-import { FileText, Link as LinkIcon, MessageSquare, StickyNote, FolderOpen, Folder, Plus, ChevronRight } from "lucide-react";
+import { FileText, Link as LinkIcon, MessageSquare, StickyNote, FolderOpen, Folder, Plus, ChevronRight, Upload, Link2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
@@ -82,8 +82,53 @@ export default function LabPage() {
                                 <h2 className="text-sm font-bold font-heading text-foreground flex-1">
                                     {bucket.name}
                                 </h2>
-                                <div className="text-xs text-muted-foreground">
-                                    {bucket.items.length} items
+                                <div className="flex items-center gap-2">
+                                    <div className="text-xs text-muted-foreground">
+                                        {bucket.items.length} items
+                                    </div>
+
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            data-testid={`button-note-${bucket.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Make a note"
+                                            title="Make a note"
+                                            type="button"
+                                        >
+                                            <StickyNote className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            data-testid={`button-upload-${bucket.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Upload a file"
+                                            title="Upload a file"
+                                            type="button"
+                                        >
+                                            <Upload className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            data-testid={`button-link-${bucket.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Link a file"
+                                            title="Link a file"
+                                            type="button"
+                                        >
+                                            <Link2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            data-testid={`button-update-${bucket.id}`}
+                                            className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            aria-label="Update bucket"
+                                            title="Update bucket"
+                                            type="button"
+                                        >
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             
