@@ -433,7 +433,7 @@ export default function GoalsPage() {
                                             {/* Right Attachments Column */}
                                             <div className="w-[20%] bg-muted/5 border-r border-border/50">
                                                 <div className="h-full flex flex-col">
-                                                    <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-attachments-title-${section.id}`}>Attachments</div>
+                                                    <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-attachments-title-${section.id}`}>Memory</div>
                                                     <div className="flex-1 overflow-y-auto">
                                                         {(section.items || []).length === 0 ? (
                                                             <div className="px-4 py-3 text-sm text-muted-foreground" data-testid={`text-attachments-empty-${section.id}`}>No files, links, or notes yet.</div>
