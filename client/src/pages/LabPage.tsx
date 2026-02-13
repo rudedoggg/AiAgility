@@ -370,10 +370,9 @@ export default function LabPage() {
                                         transition={{ duration: 0.2 }}
                                     >
                                         <div className="flex h-[400px] border-t border-border/50">
-                                            {/* Left Content Column: Bucket Chat */}
+                                            {/* Left Content Column */}
                                             <div className="w-[60%] border-r border-border/50">
                                                 <div className="h-full flex flex-col">
-                                                    <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-bucket-chat-title-${bucket.id}`}>Bucket Chat</div>
                                                     <div className="flex-1 min-h-0">
                                                         <ChatWorkspace
                                                             messages={((bucket as any).bucketMessages || []) as any}
