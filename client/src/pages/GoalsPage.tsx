@@ -260,15 +260,28 @@ export default function GoalsPage() {
                                     >
                                         <div className="flex h-[400px] border-t border-border/50">
                                             {/* Left Content Column */}
-                                            <div className="w-[80%] p-8 overflow-y-auto border-r border-border/50">
-                                                 <div className="space-y-4">
-                                                    <div className="rounded-lg border bg-card/40">
-                                                        <div className="px-4 py-2 border-b text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-attachments-title-${section.id}`}>Attachments</div>
-                                                        <div className="divide-y">
-                                                            {(section.items || []).length === 0 ? (
-                                                                <div className="px-4 py-3 text-sm text-muted-foreground" data-testid={`text-attachments-empty-${section.id}`}>No files, links, or notes yet.</div>
-                                                            ) : (
-                                                                (section.items || []).map((item) => (
+                                            <div className="w-[60%] p-8 overflow-y-auto border-r border-border/50">
+                                                <div className="prose prose-sm max-w-none text-foreground">
+                                                    {section.content ? (
+                                                        <p className="whitespace-pre-wrap leading-relaxed text-sm">{section.content}</p>
+                                                    ) : (
+                                                        <div className="py-4 text-sm text-muted-foreground italic">
+                                                            No content yet. Ask AI to draft this section.
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Right Attachments Column */}
+                                            <div className="w-[20%] bg-muted/5 border-r border-border/50">
+                                                <div className="h-full flex flex-col">
+                                                    <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-attachments-title-${section.id}`}>Attachments</div>
+                                                    <div className="flex-1 overflow-y-auto">
+                                                        {(section.items || []).length === 0 ? (
+                                                            <div className="px-4 py-3 text-sm text-muted-foreground" data-testid={`text-attachments-empty-${section.id}`}>No files, links, or notes yet.</div>
+                                                        ) : (
+                                                            <div className="divide-y">
+                                                                {(section.items || []).map((item) => (
                                                                     <div key={item.id} className="group flex items-start gap-3 px-4 py-3">
                                                                         <div className="mt-0.5 text-muted-foreground group-hover:text-primary transition-colors">
                                                                             {(item.type === 'file' || item.type === 'doc') && <FileTextIcon className="w-4 h-4" />}
@@ -299,17 +312,7 @@ export default function GoalsPage() {
                                                                             <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5" data-testid={`text-attachment-preview-${item.id}`}>{item.preview}</div>
                                                                         </div>
                                                                     </div>
-                                                                ))
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="prose prose-sm max-w-none text-foreground">
-                                                        {section.content ? (
-                                                            <p className="whitespace-pre-wrap leading-relaxed text-sm">{section.content}</p>
-                                                        ) : (
-                                                            <div className="py-4 text-sm text-muted-foreground italic">
-                                                                No content yet. Ask AI to draft this section.
+                                                                ))}
                                                             </div>
                                                         )}
                                                     </div>
