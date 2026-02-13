@@ -113,6 +113,24 @@ export default function GoalsPage() {
                 <ChatWorkspace 
                     messages={messages} 
                     onSendMessage={handleSendMessage}
+                    saveDestinations={sections.map((s) => ({ id: s.id, label: s.genericName }))}
+                    onSaveContent={(messageId, destinationId) => {
+                        const msg = messages.find((m) => m.id === messageId);
+                        if (!msg) return;
+
+                        setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
+
+                        const noteTitle = msg.content.split("\n")[0]?.slice(0, 80) || "Saved chat";
+                        const noteBody = msg.content;
+
+                        addSectionItem(destinationId, {
+                            id: `chat-${Date.now()}`,
+                            type: 'note',
+                            title: noteTitle,
+                            preview: noteBody,
+                            date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
+                        });
+                    }}
                     className="flex-1 min-h-0"
                 />
             </div>

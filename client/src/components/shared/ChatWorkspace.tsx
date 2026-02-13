@@ -12,16 +12,24 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ChatWorkspaceProps {
   messages: Message[];
   onSendMessage: (content: string) => void;
-  onSaveContent?: (messageId: string) => void;
+  onSaveContent?: (messageId: string, destinationId: string) => void;
+  saveDestinations?: { id: string; label: string }[];
   className?: string;
 }
 
-export function ChatWorkspace({ messages, onSendMessage, onSaveContent, className }: ChatWorkspaceProps) {
+export function ChatWorkspace({ messages, onSendMessage, onSaveContent, saveDestinations, className }: ChatWorkspaceProps) {
   const [input, setInput] = useState("");
+  const [saveOpenFor, setSaveOpenFor] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
@@ -77,28 +85,56 @@ export function ChatWorkspace({ messages, onSendMessage, onSaveContent, classNam
                      </div>
                      
                      {/* Metadata & Actions - Inline Right */}
-                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                     <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[10px] text-muted-foreground font-mono">
                             {msg.timestamp}
                         </span>
                         
                         {msg.hasSaveableContent && !msg.saved && (
-                           <Tooltip>
-                             <TooltipTrigger asChild>
-                               <Button 
-                                 variant="ghost" 
-                                 size="sm" 
-                                 className="h-5 px-1.5 text-[10px] gap-1 text-primary hover:bg-primary/10 hover:text-primary transition-colors font-medium rounded-sm"
-                                 onClick={() => onSaveContent?.(msg.id)}
-                               >
-                                 <Paperclip className="w-3 h-3" />
-                                 Save
-                               </Button>
-                             </TooltipTrigger>
-                             <TooltipContent side="left" className="text-xs">
-                               Save to Project
-                             </TooltipContent>
-                           </Tooltip>
+                          <DropdownMenu
+                            open={saveOpenFor === msg.id}
+                            onOpenChange={(open) => setSaveOpenFor(open ? msg.id : null)}
+                          >
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    data-testid={`button-save-${msg.id}`}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 px-1.5 text-[10px] gap-1 text-primary hover:bg-primary/10 hover:text-primary transition-colors font-medium rounded-sm"
+                                  >
+                                    <Paperclip className="w-3 h-3" />
+                                    Save
+                                  </Button>
+                                </DropdownMenuTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="text-xs">
+                                Save to a bucket
+                              </TooltipContent>
+                            </Tooltip>
+
+                            <DropdownMenuContent align="end" side="left" className="w-64">
+                              {(saveDestinations || []).length === 0 ? (
+                                <div className="px-2 py-2 text-xs text-muted-foreground" data-testid="text-save-empty">
+                                  No destinations on this page.
+                                </div>
+                              ) : (
+                                (saveDestinations || []).map((d) => (
+                                  <DropdownMenuItem
+                                    key={d.id}
+                                    data-testid={`menu-save-destination-${d.id}`}
+                                    onSelect={() => {
+                                      onSaveContent?.(msg.id, d.id);
+                                      setSaveOpenFor(null);
+                                    }}
+                                  >
+                                    {d.label}
+                                  </DropdownMenuItem>
+                                ))
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                         {!msg.hasSaveableContent && (
                             <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-foreground">

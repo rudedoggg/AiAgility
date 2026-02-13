@@ -72,7 +72,29 @@ export default function LabPage() {
                     undone={["Employee survey pending", "CEO interview notes missing"]}
                     nextSteps={["Import survey results", "Schedule CEO interview"]}
                  />
-                 <ChatWorkspace messages={messages} onSendMessage={() => {}} className="flex-1 min-h-0" />
+                 <ChatWorkspace
+                    messages={messages}
+                    onSendMessage={() => {}}
+                    saveDestinations={buckets.map((b) => ({ id: b.id, label: b.name }))}
+                    onSaveContent={(messageId, destinationId) => {
+                        const msg = messages.find((m) => m.id === messageId);
+                        if (!msg) return;
+
+                        setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
+
+                        const noteTitle = msg.content.split("\n")[0]?.slice(0, 80) || "Saved chat";
+                        const noteBody = msg.content;
+
+                        addBucketItem(destinationId, {
+                            id: `chat-${Date.now()}`,
+                            type: 'note',
+                            title: noteTitle,
+                            preview: noteBody,
+                            date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
+                        });
+                    }}
+                    className="flex-1 min-h-0"
+                 />
             </div>
         }
     >
