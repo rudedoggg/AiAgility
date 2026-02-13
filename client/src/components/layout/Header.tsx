@@ -82,10 +82,21 @@ export function Header() {
               onSelect={() => {
                 const name = window.prompt("Project name", "New Project");
                 if (!name) return;
+
+                const summary = window.prompt("Project summary (one paragraph)", "");
+                if (summary === null) return;
+
                 const id = `p-${Date.now()}`;
                 const next = { id, name };
+
                 setProjects((prev) => [next, ...prev]);
                 setSelectedProject(next);
+
+                try {
+                  window.localStorage.setItem(`agilityai:projectSummary:${id}`, summary);
+                } catch {
+                  // ignore
+                }
               }}
             >
               <FolderPlus className="w-4 h-4 mr-2" />

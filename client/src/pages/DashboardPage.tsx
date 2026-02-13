@@ -6,6 +6,14 @@ import { RefreshCw } from "lucide-react";
 import { getSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 import { getProjectTemplates } from "@/lib/projectTemplates";
 
+function getProjectSummaryFromStorage(projectId: string) {
+  try {
+    return window.localStorage.getItem(`agilityai:projectSummary:${projectId}`) || "";
+  } catch {
+    return "";
+  }
+}
+
 type Project = {
   id: string;
   name: string;
@@ -63,12 +71,14 @@ export default function DashboardPage() {
 
   const [executiveSummary, setExecutiveSummary] = useState<string>(() => {
     const initialTemplate = templates[initialSelected.id];
-    return initialTemplate ? initialTemplate.executiveSummary : "";
+    if (initialTemplate) return initialTemplate.executiveSummary;
+
+    return getProjectSummaryFromStorage(initialSelected.id);
   });
 
   useEffect(() => {
     const t = templates[activeProjectId];
-    setExecutiveSummary(t ? t.executiveSummary : "");
+    setExecutiveSummary(t ? t.executiveSummary : getProjectSummaryFromStorage(activeProjectId));
   }, [activeProjectId, templates]);
 
   const handleNewProject = () => {
