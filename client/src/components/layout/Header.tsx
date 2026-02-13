@@ -301,6 +301,7 @@ export function Header() {
             <DropdownMenuItem data-testid="menu-settings-preferences" onSelect={() => (window.location.href = "/settings/preferences")}>Preferences</DropdownMenuItem>
             <DropdownMenuItem data-testid="menu-settings-notifications" onSelect={() => (window.location.href = "/settings/notifications")}>Notifications</DropdownMenuItem>
             <DropdownMenuItem data-testid="menu-settings-billing" onSelect={() => (window.location.href = "/settings/billing")}>Billing</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-projects" onSelect={() => (window.location.href = "/settings/projects")}>Projects</DropdownMenuItem>
             <DropdownMenuItem data-testid="menu-settings-help" onSelect={() => (window.location.href = "/support")}>Help & Support</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
