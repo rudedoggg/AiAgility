@@ -309,7 +309,6 @@ export default function GoalsPage() {
                                                                                     </button>
                                                                                 </div>
                                                                             </div>
-                                                                            <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5" data-testid={`text-attachment-preview-${item.id}`}>{item.preview}</div>
                                                                         </div>
                                                                     </div>
                                                                 ))}
