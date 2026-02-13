@@ -48,6 +48,15 @@ export default function GoalsPage() {
   const [activeProject, setActiveProject] = useState(getSelectedProject());
 
   const template = templates[activeProject.id];
+  const generatedTemplate = useMemo(() => {
+    if (template) return null;
+    try {
+      const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${activeProject.id}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, [activeProject.id, template]);
 
   const [messages, setMessages] = useState<Message[]>(template ? baseMessages : mockMessages);
   const [sections, setSections] = useState<Section[]>(
@@ -234,10 +243,10 @@ export default function GoalsPage() {
             <div className="flex flex-col h-full">
                 <SummaryCard 
                     title="Goals Status"
-                    status={template?.goals.summary.status || "New project is empty. Add your first goal section to get started."}
-                    done={template?.goals.summary.done || []}
-                    undone={template?.goals.summary.undone || ["Add your first goal section"]}
-                    nextSteps={template?.goals.summary.nextSteps || ["Define objective", "Add constraints"]}
+                    status={template?.goals.summary.status || generatedTemplate?.goals?.summary?.status || "Seeded from the project summary. Next: make the goals explicit."}
+                    done={template?.goals.summary.done || generatedTemplate?.goals?.summary?.done || ["Project seeded"]}
+                    undone={template?.goals.summary.undone || generatedTemplate?.goals?.summary?.undone || ["Define objective", "List constraints"]}
+                    nextSteps={template?.goals.summary.nextSteps || generatedTemplate?.goals?.summary?.nextSteps || ["Create goal sections", "Add stakeholders"]}
                 />
                 <ChatWorkspace 
                     messages={messages} 

@@ -34,6 +34,15 @@ export default function LabPage() {
   const [activeProject, setActiveProject] = useState(getSelectedProject());
 
   const template = templates[activeProject.id];
+  const generatedTemplate = useMemo(() => {
+    if (template) return null;
+    try {
+      const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${activeProject.id}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, [activeProject.id, template]);
 
   const [messages, setMessages] = useState<Message[]>(template ? baseMessages : mockMessages);
   const [buckets, setBuckets] = useState<Bucket[]>(
@@ -192,10 +201,10 @@ export default function LabPage() {
             <div className="flex flex-col h-full">
                  <SummaryCard 
                     title="Lab Status"
-                    status={template?.lab.summary.status || "New project is empty. Add your first knowledge bucket to get started."}
-                    done={template?.lab.summary.done || []}
-                    undone={template?.lab.summary.undone || ["Add your first knowledge bucket"]}
-                    nextSteps={template?.lab.summary.nextSteps || ["Capture key sources", "Create an assumptions bucket"]}
+                    status={template?.lab.summary.status || generatedTemplate?.lab?.summary?.status || "Seeded from the project summary. Next: capture evidence and open questions."}
+                    done={template?.lab.summary.done || generatedTemplate?.lab?.summary?.done || []}
+                    undone={template?.lab.summary.undone || generatedTemplate?.lab?.summary?.undone || ["Add first evidence bucket"]}
+                    nextSteps={template?.lab.summary.nextSteps || generatedTemplate?.lab?.summary?.nextSteps || ["Add sources", "Log assumptions"]}
                  />
                  <ChatWorkspace
                     messages={messages}

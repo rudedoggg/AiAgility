@@ -74,6 +74,14 @@ export default function DashboardPage() {
   }, []);
 
   const activeProject = useMemo(() => projects.find((p) => p.id === activeProjectId) || projects[0], [projects, activeProjectId]);
+  const generatedTemplate = useMemo(() => {
+    try {
+      const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${activeProjectId}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, [activeProjectId]);
 
   const [executiveSummary, setExecutiveSummary] = useState<string>(() => {
     const initialTemplate = templates[initialSelected.id];
@@ -84,8 +92,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const t = templates[activeProjectId];
-    setExecutiveSummary(t ? t.executiveSummary : getProjectSummaryFromStorage(activeProjectId));
-  }, [activeProjectId, templates]);
+    setExecutiveSummary(t ? t.executiveSummary : (generatedTemplate?.executiveSummary || getProjectSummaryFromStorage(activeProjectId)));
+  }, [activeProjectId, templates, generatedTemplate]);
 
   const handleNewProject = () => {
     const name = window.prompt("Project name", "New Project");
@@ -104,7 +112,7 @@ export default function DashboardPage() {
 
   const handleRefreshSummary = () => {
     const t = templates[activeProjectId];
-    const refreshed = (t?.executiveSummary || generateExecutiveSummary(activeProject?.name || "Project"))
+    const refreshed = (t?.executiveSummary || generatedTemplate?.executiveSummary || generateExecutiveSummary(activeProject?.name || "Project"))
       .replace("(Draft)", "(Draft • refreshed)")
       .replace("## Standing Question", `## Standing Question\n(Refreshed ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`);
 
@@ -135,42 +143,10 @@ export default function DashboardPage() {
                 <div className="p-6 space-y-6">
                   <SummaryCard
                     title="Project Status"
-                    status={
-                      activeProject?.id === "p-1"
-                        ? "Decision timeline is active. Define criteria, gather options, then converge."
-                        : activeProject?.id === "p-2"
-                          ? "Analysis project. Build a defensible model and communicate tradeoffs clearly."
-                          : activeProject?.id === "p-3"
-                            ? "Writing project. Convert inputs into a board-ready narrative and artifacts."
-                            : "New project is empty. Add Goals, Knowledge Buckets, and Deliverables to start."
-                    }
-                    done={
-                      activeProject?.id === "p-1"
-                        ? ["Drafted decision framing"]
-                        : activeProject?.id === "p-2"
-                          ? ["Identified data sources"]
-                          : activeProject?.id === "p-3"
-                            ? ["Collected initial inputs"]
-                            : []
-                    }
-                    undone={
-                      activeProject?.id === "p-1"
-                        ? ["Confirm budget cap", "Collect commute data"]
-                        : activeProject?.id === "p-2"
-                          ? ["Normalize locations", "Produce charts"]
-                          : activeProject?.id === "p-3"
-                            ? ["Align on narrative", "Finalize appendix"]
-                            : ["Create your first goal", "Add your first bucket"]
-                    }
-                    nextSteps={
-                      activeProject?.id === "p-1"
-                        ? ["Lock evaluation criteria", "Gather 3 location options"]
-                        : activeProject?.id === "p-2"
-                          ? ["Run baseline model", "Document assumptions"]
-                          : activeProject?.id === "p-3"
-                            ? ["Draft v1", "Run review"]
-                            : ["Define objective", "Start a deliverable outline"]
-                    }
+                    status={templates[activeProjectId]?.dashboardStatus.status || "Seeded from the project summary. Next: turn the narrative into Goals, Knowledge Buckets, and Deliverables."}
+                    done={templates[activeProjectId]?.dashboardStatus.done || ["Project seeded"]}
+                    undone={templates[activeProjectId]?.dashboardStatus.undone || ["Create goal sections", "Create knowledge buckets", "Create deliverables"]}
+                    nextSteps={templates[activeProjectId]?.dashboardStatus.nextSteps || ["Define objective", "List constraints", "Draft a v1 deliverable"]}
                   />
 
                   <div className="rounded-xl border bg-card/40 overflow-hidden">

@@ -35,6 +35,15 @@ export default function DeliverablesPage() {
   const [activeProject, setActiveProject] = useState(getSelectedProject());
 
   const template = templates[activeProject.id];
+  const generatedTemplate = useMemo(() => {
+    if (template) return null;
+    try {
+      const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${activeProject.id}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, [activeProject.id, template]);
 
   const [messages, setMessages] = useState<Message[]>(template ? baseMessages : mockMessages);
   const [deliverables, setDeliverables] = useState<Deliverable[]>(
@@ -205,10 +214,10 @@ export default function DeliverablesPage() {
             <div className="flex flex-col h-full">
                  <SummaryCard 
                     title="Deliverables Status"
-                    status={template?.deliverables.summary.status || "New project is empty. Add your first deliverable to get started."}
-                    done={template?.deliverables.summary.done || []}
-                    undone={template?.deliverables.summary.undone || ["Add your first deliverable"]}
-                    nextSteps={template?.deliverables.summary.nextSteps || ["Outline deliverable", "Collect memory items"]}
+                    status={template?.deliverables.summary.status || generatedTemplate?.deliverables?.summary?.status || "Seeded from the project summary. Next: draft the first deliverable."}
+                    done={template?.deliverables.summary.done || generatedTemplate?.deliverables?.summary?.done || []}
+                    undone={template?.deliverables.summary.undone || generatedTemplate?.deliverables?.summary?.undone || ["Create deliverable outline"]}
+                    nextSteps={template?.deliverables.summary.nextSteps || generatedTemplate?.deliverables?.summary?.nextSteps || ["Draft v1", "Attach memory items"]}
                 />
                  <ChatWorkspace
                     messages={messages}
