@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages, mockSections } from "@/lib/mockData";
 import { Message, Section } from "@/lib/types";
-import { ChevronRight, Target, Flag, Users, AlertTriangle, Circle, ChevronDown, StickyNote, Upload, Link2, RefreshCw } from "lucide-react";
+import { ChevronRight, Target, Flag, Users, AlertTriangle, Circle, ChevronDown, StickyNote, Upload, Link2, RefreshCw, Trash2, FileText as FileTextIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ResizableHandle,
@@ -139,7 +139,13 @@ export default function GoalsPage() {
                                         <button
                                             data-testid={`button-note-${section.id}`}
                                             className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const title = window.prompt(`New note in “${section.genericName}”`, "Quick note");
+                                                if (!title) return;
+                                                const content = window.prompt("Note text", "");
+                                                // Demo-only: no persistence beyond in-memory state
+                                            }}
                                             aria-label="Make a note"
                                             title="Make a note"
                                             type="button"

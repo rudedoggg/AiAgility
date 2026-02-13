@@ -22,10 +22,13 @@ export type Section = {
 
 export type BucketItem = {
   id: string;
-  type: 'doc' | 'link' | 'chat' | 'note';
+  type: 'doc' | 'link' | 'chat' | 'note' | 'file';
   title: string;
   preview: string;
   date: string;
+  url?: string;
+  fileName?: string;
+  fileSizeLabel?: string;
 };
 
 export type Bucket = {
