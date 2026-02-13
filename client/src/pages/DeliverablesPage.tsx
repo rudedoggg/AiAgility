@@ -229,16 +229,18 @@ export default function DeliverablesPage() {
 
                         setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
 
-                        const noteTitle = msg.content.split("\n")[0]?.slice(0, 80) || "Saved chat";
-                        const noteBody = msg.content;
+                        const now = new Date();
+                        const label = now.toLocaleDateString([], { month: "short", day: "numeric" });
+                        const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                        const firstLine = msg.content.split("\n")[0]?.trim();
 
                         addDeliverableItem(destinationId, {
-                            id: `chat-${Date.now()}`,
-                            type: 'note',
-                            title: noteTitle,
-                            preview: noteBody,
-                            date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
-                        });
+                            id: `ver-${Date.now()}`,
+                            type: "doc",
+                            title: `v${Date.now()} • ${time}${firstLine ? ` • ${firstLine.slice(0, 48)}` : ""}`,
+                            preview: msg.content,
+                            date: label,
+                        } as any);
                     }}
                     className="flex-1 min-h-0"
                  />
