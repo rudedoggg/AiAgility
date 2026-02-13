@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AppShell } from "@/components/layout/AppShell";
+import { Header } from "@/components/layout/Header";
 import { SummaryCard } from "@/components/shared/SummaryCard";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -75,6 +75,7 @@ export default function DashboardPage() {
 
   return (
     <div className="h-screen w-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
+      <Header />
       <div className="flex-1 pt-[60px] h-full overflow-hidden w-full">
         <div className="h-full w-full grid grid-cols-[320px_1fr]">
           {/* Left: Projects */}
