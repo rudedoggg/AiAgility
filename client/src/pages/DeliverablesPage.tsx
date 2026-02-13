@@ -1,7 +1,9 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
-import { mockMessages, mockDeliverables } from "@/lib/mockData";
+import { mockMessages } from "@/lib/mockData";
+import { getProjectTemplates } from "@/lib/projectTemplates";
+import { getSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 import { Message, Deliverable } from "@/lib/types";
 import { FileText, Download, Share2, CheckSquare, Edit3, ChevronRight, StickyNote, Upload, Link2, RefreshCw, Trash2, FileText as FileTextIcon } from "lucide-react";
 import { cn, getBucketProgressPercent } from "@/lib/utils";
@@ -14,10 +16,28 @@ import { SummaryCard } from "@/components/shared/SummaryCard";
 import { ScopedHistory } from "@/components/shared/ScopedHistory";
 
 export default function DeliverablesPage() {
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
-  const [deliverables, setDeliverables] = useState<Deliverable[]>(mockDeliverables.map(d => ({...d, isOpen: true, items: (d as any).items || [], bucketMessages: (d as any).bucketMessages || [], completeness: (d as any).completeness ?? 50, subtitle: (d as any).subtitle || ''}))); // Default open for demo
+  const { templates, baseMessages } = getProjectTemplates();
+  const [activeProject, setActiveProject] = useState(getSelectedProject());
+
+  const template = templates[activeProject.id];
+
+  const [messages, setMessages] = useState<Message[]>(template ? baseMessages : mockMessages);
+  const [deliverables, setDeliverables] = useState<Deliverable[]>(
+    template ? template.deliverables.deliverables.map(d => ({...d, isOpen: true, items: (d as any).items || [], bucketMessages: (d as any).bucketMessages || [], completeness: (d as any).completeness ?? 50, subtitle: (d as any).subtitle || ''})) : []
+  ); // Default open for demo
   const deliverableRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  useEffect(() => {
+    const unsub = subscribeToSelectedProject((p) => {
+      setActiveProject(p);
+
+      const nextTemplate = templates[p.id];
+      setMessages(nextTemplate ? baseMessages : mockMessages);
+      setDeliverables(nextTemplate ? nextTemplate.deliverables.deliverables.map(d => ({...d, isOpen: true, items: (d as any).items || [], bucketMessages: (d as any).bucketMessages || [], completeness: (d as any).completeness ?? 50, subtitle: (d as any).subtitle || ''})) : []);
+    });
+    return () => unsub();
+  }, [baseMessages, templates]);
 
   const toggleDeliverable = (id: string) => {
     setDeliverables(prev => prev.map(d => 

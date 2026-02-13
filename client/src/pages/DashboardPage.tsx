@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { SummaryCard } from "@/components/shared/SummaryCard";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RefreshCw, Folder, FolderOpen, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { setSelectedProject } from "@/lib/projectStore";
+import { getSelectedProject, setSelectedProject } from "@/lib/projectStore";
 
 type Project = {
   id: string;
@@ -45,10 +45,25 @@ export default function DashboardPage() {
     { id: "p-3", name: "Board Memo Draft", createdAtLabel: "Created Feb 10" },
   ]);
 
-  const [activeProjectId, setActiveProjectId] = useState<string>(projects[0]?.id || "");
+  const initialSelected = getSelectedProject();
+  const [activeProjectId, setActiveProjectId] = useState<string>(() => {
+    const exists = projects.some((p) => p.id === initialSelected.id);
+    return exists ? initialSelected.id : (projects[0]?.id || "");
+  });
   const activeProject = useMemo(() => projects.find((p) => p.id === activeProjectId) || projects[0], [projects, activeProjectId]);
 
-  const [executiveSummary, setExecutiveSummary] = useState<string>(() => generateExecutiveSummary(projects[0]?.name || "Project"));
+  const [executiveSummary, setExecutiveSummary] = useState<string>(() => {
+    const initialProject = projects.find((p) => p.id === initialSelected.id) || projects[0];
+    return initialProject ? generateExecutiveSummary(initialProject?.name || "Project") : "";
+  });
+
+  useEffect(() => {
+    if (activeProject) setSelectedProject({ id: activeProject.id, name: activeProject.name });
+  }, [activeProject?.id]);
+
+  useEffect(() => {
+    if (activeProject) setExecutiveSummary(generateExecutiveSummary(activeProject.name));
+  }, [activeProject?.id]);
 
   const handleNewProject = () => {
     const name = window.prompt("Project name", "New Project");
@@ -63,6 +78,7 @@ export default function DashboardPage() {
     setProjects((prev) => [p, ...prev]);
     setActiveProjectId(p.id);
     setExecutiveSummary(generateExecutiveSummary(p.name));
+    setSelectedProject({ id: p.id, name: p.name });
   };
 
   const handleRefreshSummary = () => {
@@ -162,10 +178,42 @@ export default function DashboardPage() {
                 <div className="p-6 space-y-6">
                   <SummaryCard
                     title="Project Status"
-                    status="Overall progress is steady. Goals and Deliverables are converging, but research buckets need consolidation."
-                    done={["Bucket UX standardized", "Scoped chats enabled"]}
-                    undone={["Executive summary automation", "Project-level linking across pages"]}
-                    nextSteps={["Refresh and refine executive summary", "Add project switching across sections"]}
+                    status={
+                      activeProject?.id === "p-1"
+                        ? "Decision timeline is active. Define criteria, gather options, then converge."
+                        : activeProject?.id === "p-2"
+                          ? "Analysis project. Build a defensible model and communicate tradeoffs clearly."
+                          : activeProject?.id === "p-3"
+                            ? "Writing project. Convert inputs into a board-ready narrative and artifacts."
+                            : "New project is empty. Add Goals, Knowledge Buckets, and Deliverables to start."
+                    }
+                    done={
+                      activeProject?.id === "p-1"
+                        ? ["Drafted decision framing"]
+                        : activeProject?.id === "p-2"
+                          ? ["Identified data sources"]
+                          : activeProject?.id === "p-3"
+                            ? ["Collected initial inputs"]
+                            : []
+                    }
+                    undone={
+                      activeProject?.id === "p-1"
+                        ? ["Confirm budget cap", "Collect commute data"]
+                        : activeProject?.id === "p-2"
+                          ? ["Normalize locations", "Produce charts"]
+                          : activeProject?.id === "p-3"
+                            ? ["Align on narrative", "Finalize appendix"]
+                            : ["Create your first goal", "Add your first bucket"]
+                    }
+                    nextSteps={
+                      activeProject?.id === "p-1"
+                        ? ["Lock evaluation criteria", "Gather 3 location options"]
+                        : activeProject?.id === "p-2"
+                          ? ["Run baseline model", "Document assumptions"]
+                          : activeProject?.id === "p-3"
+                            ? ["Draft v1", "Run review"]
+                            : ["Define objective", "Start a deliverable outline"]
+                    }
                   />
 
                   <div className="rounded-xl border bg-card/40 overflow-hidden">
@@ -190,7 +238,12 @@ export default function DashboardPage() {
                         className="prose prose-sm max-w-none prose-headings:font-heading prose-headings:font-bold prose-h1:text-xl prose-h2:text-base prose-p:text-muted-foreground prose-p:leading-relaxed"
                         data-testid="text-exec-summary-body"
                       >
-                        {executiveSummary.split("\n").map((line, i) => {
+                        {!executiveSummary && (
+                          <p className="text-sm text-muted-foreground">
+                            This project is currently empty. Create Goals, Knowledge Buckets, and Deliverables to get an executive summary.
+                          </p>
+                        )}
+                        {!!executiveSummary && executiveSummary.split("\n").map((line, i) => {
                           if (line.startsWith("# ")) return <h1 key={i} className="mb-4">{line.replace("# ", "")}</h1>;
                           if (line.startsWith("## ")) return <h2 key={i} className="mt-6 mb-2 text-foreground">{line.replace("## ", "")}</h2>;
                           if (line.match(/^\d\./)) return <div key={i} className="ml-4 font-medium text-foreground py-1">{line}</div>;

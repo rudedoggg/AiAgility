@@ -1,7 +1,9 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
-import { mockMessages, mockSections } from "@/lib/mockData";
+import { mockMessages } from "@/lib/mockData";
+import { getProjectTemplates } from "@/lib/projectTemplates";
+import { getSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 import { Message, Section } from "@/lib/types";
 import { ChevronRight, Target, Flag, Users, AlertTriangle, Circle, ChevronDown, StickyNote, Upload, Link2, RefreshCw, Trash2, FileText as FileTextIcon } from "lucide-react";
 import { cn, getBucketProgressPercent } from "@/lib/utils";
@@ -27,10 +29,28 @@ function getSectionIcon(id: string) {
 }
 
 export default function GoalsPage() {
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
-  const [sections, setSections] = useState<Section[]>(mockSections.map(s => ({ ...s, items: s.items || [], bucketMessages: (s as any).bucketMessages || [] })));
+  const { templates, baseMessages } = getProjectTemplates();
+  const [activeProject, setActiveProject] = useState(getSelectedProject());
+
+  const template = templates[activeProject.id];
+
+  const [messages, setMessages] = useState<Message[]>(template ? baseMessages : mockMessages);
+  const [sections, setSections] = useState<Section[]>(
+    template ? template.goals.sections.map(s => ({ ...s, items: s.items || [], bucketMessages: (s as any).bucketMessages || [] })) : []
+  );
   const sectionRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  useEffect(() => {
+    const unsub = subscribeToSelectedProject((p) => {
+      setActiveProject(p);
+
+      const nextTemplate = templates[p.id];
+      setMessages(nextTemplate ? baseMessages : mockMessages);
+      setSections(nextTemplate ? nextTemplate.goals.sections.map(s => ({ ...s, items: s.items || [], bucketMessages: (s as any).bucketMessages || [] })) : []);
+    });
+    return () => unsub();
+  }, [baseMessages, templates]);
 
   const handleSendMessage = (content: string) => {
     const newMessage: Message = {

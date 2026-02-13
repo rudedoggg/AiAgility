@@ -1,7 +1,9 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
-import { mockMessages, mockBuckets } from "@/lib/mockData";
+import { mockMessages } from "@/lib/mockData";
+import { getProjectTemplates } from "@/lib/projectTemplates";
+import { getSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 import { Message, Bucket } from "@/lib/types";
 import { FileText, Link as LinkIcon, MessageSquare, StickyNote, FolderOpen, Folder, Plus, ChevronRight, Upload, Link2, RefreshCw, Trash2 } from "lucide-react";
 import { cn, getBucketProgressPercent } from "@/lib/utils";
@@ -13,10 +15,28 @@ import { SummaryCard } from "@/components/shared/SummaryCard";
 import { ScopedHistory } from "@/components/shared/ScopedHistory";
 
 export default function LabPage() {
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
-  const [buckets, setBuckets] = useState<Bucket[]>(mockBuckets.map(b => ({ ...b, bucketMessages: (b as any).bucketMessages || [] })));
+  const { templates, baseMessages } = getProjectTemplates();
+  const [activeProject, setActiveProject] = useState(getSelectedProject());
+
+  const template = templates[activeProject.id];
+
+  const [messages, setMessages] = useState<Message[]>(template ? baseMessages : mockMessages);
+  const [buckets, setBuckets] = useState<Bucket[]>(
+    template ? template.lab.buckets.map(b => ({ ...b, bucketMessages: (b as any).bucketMessages || [] })) : []
+  );
   const bucketRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  useEffect(() => {
+    const unsub = subscribeToSelectedProject((p) => {
+      setActiveProject(p);
+
+      const nextTemplate = templates[p.id];
+      setMessages(nextTemplate ? baseMessages : mockMessages);
+      setBuckets(nextTemplate ? nextTemplate.lab.buckets.map(b => ({ ...b, bucketMessages: (b as any).bucketMessages || [] })) : []);
+    });
+    return () => unsub();
+  }, [baseMessages, templates]);
 
   const toggleBucket = (id: string) => {
       setBuckets(prev => prev.map(b => b.id === id ? { ...b, isOpen: !b.isOpen } : b));
