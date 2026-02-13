@@ -404,18 +404,23 @@ export default function DeliverablesPage() {
                                                                     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                                                                 };
 
+                                                                const versions = ((((doc as any).items || []) as any[]).filter((i: any) => i.type === 'doc' || i.type === 'link'));
+                                                                const current = versions[0];
+
                                                                 const contextLines = [
                                                                     `Deliverable: ${doc.title}`,
                                                                     (doc as any).subtitle ? `Subtitle: ${(doc as any).subtitle}` : null,
                                                                     `Status: ${doc.status}`,
-                                                                    "Attachments:",
-                                                                    ...(((((doc as any).items || []) as any[]).slice(0, 8)).map((i: any) => `- [${i.type}] ${i.title}`)),
+                                                                    current ? `Current version: ${current.title}` : "Current version: (none yet)",
+                                                                    "Deliverable versions:",
+                                                                    ...versions.slice(0, 8).map((i: any) => `- [${i.type}] ${i.title}`),
+                                                                    "\nInstruction: This bucket chat is for editing the deliverable. Propose changes as a patch or a new version.",
                                                                 ].filter(Boolean);
 
                                                                 const aiMsg = {
                                                                     id: (Date.now() + 1).toString(),
                                                                     role: "ai" as const,
-                                                                    content: `Got it. I’m only using this deliverable’s context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}`,
+                                                                    content: `I’ll help edit this deliverable. I’m only using this deliverable’s versions + context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}\n\nIf you want, reply with “save as new version” and I’ll format the update to paste into a new version.`,
                                                                     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                                                                 };
 
@@ -436,37 +441,39 @@ export default function DeliverablesPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Right Attachments Column */}
+                                            {/* Right Deliverable Column */}
                                             <div className="w-[20%] bg-muted/5 border-r border-border/50">
                                                 <div className="h-full flex flex-col">
-                                                    <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-attachments-title-${doc.id}`}>Memory</div>
+                                                    <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-deliverable-title-${doc.id}`}>Deliverable</div>
                                                     <div className="flex-1 overflow-y-auto">
                                                         {(((doc as any).items || []) as any[]).length === 0 ? (
-                                                            <div className="px-4 py-3 text-sm text-muted-foreground" data-testid={`text-attachments-empty-${doc.id}`}>No files, links, or notes yet.</div>
+                                                            <div className="px-4 py-3 text-sm text-muted-foreground" data-testid={`text-deliverable-empty-${doc.id}`}>No versions yet. Use chat to draft and save the first version.</div>
                                                         ) : (
                                                             <div className="divide-y">
-                                                                {(((doc as any).items || []) as any[]).map((item: any) => (
+                                                                {(((doc as any).items || []) as any[])
+                                                                    .filter((i: any) => i.type === 'doc' || i.type === 'link')
+                                                                    .map((item: any, idx: number) => (
                                                                     <div key={item.id} className="group flex items-start gap-3 px-4 py-3">
                                                                         <div className="mt-0.5 text-muted-foreground group-hover:text-primary transition-colors">
-                                                                            {(item.type === 'file' || item.type === 'doc') && <FileTextIcon className="w-4 h-4" />}
+                                                                            {item.type === 'doc' && <FileTextIcon className="w-4 h-4" />}
                                                                             {item.type === 'link' && <Link2 className="w-4 h-4" />}
-                                                                            {item.type === 'note' && <StickyNote className="w-4 h-4" />}
-                                                                            {item.type === 'chat' && <ChevronRight className="w-4 h-4" />}
                                                                         </div>
                                                                         <div className="flex-1 min-w-0">
                                                                             <div className="flex items-center justify-between gap-3">
-                                                                                <div className="text-sm font-medium text-foreground truncate" data-testid={`text-attachment-name-${item.id}`}>{item.title}</div>
+                                                                                <div className="min-w-0">
+                                                                                    <div className="text-sm font-medium text-foreground truncate" data-testid={`text-deliverable-version-name-${item.id}`}>{item.title}</div>
+                                                                                    <div className="text-[10px] text-muted-foreground" data-testid={`text-deliverable-version-meta-${item.id}`}>Version {(((doc as any).items || []) as any[]).filter((v: any) => v.type === 'doc' || v.type === 'link').length - idx} • {item.date}</div>
+                                                                                </div>
                                                                                 <div className="flex items-center gap-2 shrink-0">
-                                                                                    <div className="text-[10px] text-muted-foreground" data-testid={`text-attachment-date-${item.id}`}>{item.date}</div>
                                                                                     <button
-                                                                                        data-testid={`button-delete-item-${item.id}`}
+                                                                                        data-testid={`button-delete-version-${item.id}`}
                                                                                         className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 opacity-0 group-hover:opacity-100 transition-opacity"
                                                                                         onClick={(e) => {
                                                                                             e.stopPropagation();
                                                                                             deleteDeliverableItem(doc.id, item.id);
                                                                                         }}
-                                                                                        aria-label="Delete item"
-                                                                                        title="Delete item"
+                                                                                        aria-label="Delete version"
+                                                                                        title="Delete version"
                                                                                         type="button"
                                                                                     >
                                                                                         <Trash2 className="w-3.5 h-3.5" />
