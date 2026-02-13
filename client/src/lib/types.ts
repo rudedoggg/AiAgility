@@ -17,6 +17,7 @@ export type Section = {
   totalItems: number;
   completedItems: number;
   content?: string;
+  items?: BucketItem[];
   isOpen?: boolean;
 };
 
@@ -41,8 +42,11 @@ export type Bucket = {
 export type Deliverable = {
   id: string;
   title: string;
+  subtitle?: string;
+  completeness?: number; // 0-100
   status: 'draft' | 'review' | 'final';
   lastEdited: string;
   content: string;
+  items?: BucketItem[];
   engaged: boolean; // Whether AI engages with this
 };

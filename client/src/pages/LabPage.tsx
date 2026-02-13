@@ -92,8 +92,11 @@ export default function LabPage() {
                                     {bucket.name}
                                 </h2>
                                 <div className="flex items-center gap-2">
-                                    <div className="text-xs text-muted-foreground">
-                                        {bucket.items.length} items
+                                    <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden" data-testid={`progress-${bucket.id}`}>
+                                        <div
+                                            className="h-full bg-primary/80"
+                                            style={{ width: `${Math.min(100, Math.round((bucket.items.length / 8) * 100))}%` }}
+                                        />
                                     </div>
 
                                     <div className="flex items-center gap-1">

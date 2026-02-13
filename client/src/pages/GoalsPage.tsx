@@ -28,8 +28,9 @@ function getSectionIcon(id: string) {
 
 export default function GoalsPage() {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
-  const [sections, setSections] = useState<Section[]>(mockSections);
+  const [sections, setSections] = useState<Section[]>(mockSections.map(s => ({ ...s, items: s.items || [] })));
   const sectionRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const handleSendMessage = (content: string) => {
     const newMessage: Message = {
@@ -55,6 +56,14 @@ export default function GoalsPage() {
 
   const toggleSection = (id: string) => {
       setSections(prev => prev.map(s => s.id === id ? { ...s, isOpen: !s.isOpen } : s));
+  };
+
+  const addSectionItem = (sectionId: string, item: NonNullable<Section["items"]>[number]) => {
+      setSections(prev => prev.map(s => s.id === sectionId ? { ...s, items: [item, ...(s.items || [])] } : s));
+  };
+
+  const deleteSectionItem = (sectionId: string, itemId: string) => {
+      setSections(prev => prev.map(s => s.id === sectionId ? { ...s, items: (s.items || []).filter(i => i.id !== itemId) } : s));
   };
 
   const scrollToSection = (id: string) => {
@@ -144,7 +153,14 @@ export default function GoalsPage() {
                                                 const title = window.prompt(`New note in “${section.genericName}”`, "Quick note");
                                                 if (!title) return;
                                                 const content = window.prompt("Note text", "");
-                                                // Demo-only: no persistence beyond in-memory state
+
+                                                addSectionItem(section.id, {
+                                                    id: `${Date.now()}`,
+                                                    type: 'note',
+                                                    title,
+                                                    preview: (content || "").slice(0, 80) || "(empty)",
+                                                    date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })
+                                                });
                                             }}
                                             aria-label="Make a note"
                                             title="Make a note"
@@ -152,10 +168,37 @@ export default function GoalsPage() {
                                         >
                                             <StickyNote className="w-3.5 h-3.5" />
                                         </button>
+                                        <input
+                                            ref={(el) => { fileInputRefs.current[section.id] = el; }}
+                                            className="hidden"
+                                            data-testid={`input-file-${section.id}`}
+                                            type="file"
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={(e) => {
+                                                const file = e.currentTarget.files?.[0];
+                                                if (!file) return;
+
+                                                addSectionItem(section.id, {
+                                                    id: `${Date.now()}`,
+                                                    type: 'file',
+                                                    title: file.name,
+                                                    preview: `${Math.round(file.size / 1024)} KB`,
+                                                    date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
+                                                    fileName: file.name,
+                                                    fileSizeLabel: `${Math.round(file.size / 1024)} KB`
+                                                });
+
+                                                e.currentTarget.value = "";
+                                            }}
+                                        />
+
                                         <button
                                             data-testid={`button-upload-${section.id}`}
                                             className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                fileInputRefs.current[section.id]?.click();
+                                            }}
                                             aria-label="Upload a file"
                                             title="Upload a file"
                                             type="button"
@@ -165,7 +208,21 @@ export default function GoalsPage() {
                                         <button
                                             data-testid={`button-link-${section.id}`}
                                             className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const url = window.prompt("Paste a link (URL)", "https://");
+                                                if (!url) return;
+                                                const title = window.prompt("Link name", url) || url;
+
+                                                addSectionItem(section.id, {
+                                                    id: `${Date.now()}`,
+                                                    type: 'link',
+                                                    title,
+                                                    preview: url,
+                                                    date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
+                                                    url
+                                                });
+                                            }}
                                             aria-label="Link a file"
                                             title="Link a file"
                                             type="button"
@@ -197,15 +254,59 @@ export default function GoalsPage() {
                                         <div className="flex h-[400px] border-t border-border/50">
                                             {/* Left Content Column */}
                                             <div className="w-[80%] p-8 overflow-y-auto border-r border-border/50">
-                                                 <div className="prose prose-sm max-w-none text-foreground">
-                                                    {section.content ? (
-                                                        <p className="whitespace-pre-wrap leading-relaxed text-sm">{section.content}</p>
-                                                    ) : (
-                                                        <div className="py-4 text-sm text-muted-foreground italic">
-                                                            No content yet. Ask AI to draft this section.
+                                                 <div className="space-y-4">
+                                                    <div className="rounded-lg border bg-card/40">
+                                                        <div className="px-4 py-2 border-b text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-attachments-title-${section.id}`}>Attachments</div>
+                                                        <div className="divide-y">
+                                                            {(section.items || []).length === 0 ? (
+                                                                <div className="px-4 py-3 text-sm text-muted-foreground" data-testid={`text-attachments-empty-${section.id}`}>No files, links, or notes yet.</div>
+                                                            ) : (
+                                                                (section.items || []).map((item) => (
+                                                                    <div key={item.id} className="group flex items-start gap-3 px-4 py-3">
+                                                                        <div className="mt-0.5 text-muted-foreground group-hover:text-primary transition-colors">
+                                                                            {(item.type === 'file' || item.type === 'doc') && <FileTextIcon className="w-4 h-4" />}
+                                                                            {item.type === 'link' && <Link2 className="w-4 h-4" />}
+                                                                            {item.type === 'note' && <StickyNote className="w-4 h-4" />}
+                                                                            {item.type === 'chat' && <ChevronDown className="w-4 h-4" />}
+                                                                        </div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex items-center justify-between gap-3">
+                                                                                <div className="text-sm font-medium text-foreground truncate" data-testid={`text-attachment-name-${item.id}`}>{item.title}</div>
+                                                                                <div className="flex items-center gap-2 shrink-0">
+                                                                                    <div className="text-[10px] text-muted-foreground" data-testid={`text-attachment-date-${item.id}`}>{item.date}</div>
+                                                                                    <button
+                                                                                        data-testid={`button-delete-item-${item.id}`}
+                                                                                        className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            deleteSectionItem(section.id, item.id);
+                                                                                        }}
+                                                                                        aria-label="Delete item"
+                                                                                        title="Delete item"
+                                                                                        type="button"
+                                                                                    >
+                                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5" data-testid={`text-attachment-preview-${item.id}`}>{item.preview}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))
+                                                            )}
                                                         </div>
-                                                    )}
-                                                 </div>
+                                                    </div>
+
+                                                    <div className="prose prose-sm max-w-none text-foreground">
+                                                        {section.content ? (
+                                                            <p className="whitespace-pre-wrap leading-relaxed text-sm">{section.content}</p>
+                                                        ) : (
+                                                            <div className="py-4 text-sm text-muted-foreground italic">
+                                                                No content yet. Ask AI to draft this section.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
                                             
                                             {/* Right History Column */}

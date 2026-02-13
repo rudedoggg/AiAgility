@@ -31,6 +31,10 @@ export const mockSections: Section[] = [
     totalItems: 5,
     completedItems: 4,
     content: "Current lease expires in 6 months. Team has grown by 40% since last year. We are shifting to a hybrid model.",
+    items: [
+      { id: 'g-1', type: 'note', title: 'Kickoff notes', preview: 'Lease renewal options, renewal penalties, and break clauses...', date: 'Feb 7' },
+      { id: 'g-2', type: 'link', title: 'Lease summary doc', preview: 'https://example.com/lease-summary', date: 'Feb 8', url: 'https://example.com/lease-summary' },
+    ],
     isOpen: true
   },
   {
@@ -40,6 +44,9 @@ export const mockSections: Section[] = [
     completeness: 40,
     totalItems: 3,
     completedItems: 1,
+    items: [
+      { id: 'g-3', type: 'file', title: 'Objective draft v2.pdf', preview: '128 KB', date: 'Feb 9', fileName: 'Objective draft v2.pdf', fileSizeLabel: '128 KB' },
+    ],
     isOpen: false
   },
   {
@@ -90,6 +97,12 @@ export const mockDeliverables: Deliverable[] = [
     status: 'draft',
     lastEdited: 'Just now',
     engaged: true,
+    completeness: 65,
+    subtitle: 'Board-ready memo + appendix',
+    items: [
+      { id: 'd-1', type: 'note', title: 'Edits to incorporate', preview: 'Tone down certainty; add risk section; add sensitivity table...', date: 'Feb 10' },
+      { id: 'd-2', type: 'link', title: 'Comp set spreadsheet', preview: 'https://example.com/comp-set', date: 'Feb 11', url: 'https://example.com/comp-set' },
+    ],
     content: `# Board Recommendation: New Office Location
 
 ## Executive Summary
@@ -107,8 +120,13 @@ We recommend proceeding with the downtown location due to its superior accessibi
     id: '2',
     title: 'Employee Commute Analysis',
     status: 'review',
+    completeness: 35,
+    subtitle: 'Commute model + charts',
     lastEdited: '2 hours ago',
     engaged: false,
+    items: [
+      { id: 'd-3', type: 'file', title: 'Commute dataset.csv', preview: '842 KB', date: 'Feb 9', fileName: 'Commute dataset.csv', fileSizeLabel: '842 KB' },
+    ],
     content: 'Loading analysis...'
   }
 ];
