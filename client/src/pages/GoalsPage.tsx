@@ -1,4 +1,19 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages } from "@/lib/mockData";
@@ -95,22 +110,65 @@ export default function GoalsPage() {
       }, 50);
   };
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sectionIds = useMemo(() => sections.map((s) => s.id), [sections]);
+
+  function SortableNavRow({ sectionId }: { sectionId: string }) {
+    const section = sections.find((s) => s.id === sectionId);
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sectionId });
+
+    if (!section) return null;
+
+    return (
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        data-testid={`nav-row-${section.id}`}
+        onClick={() => scrollToSection(section.id)}
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 text-sm font-medium border-l-2 cursor-pointer transition-colors select-none",
+          "border-transparent text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50",
+          isDragging && "bg-sidebar-accent/60 text-foreground"
+        )}
+        style={{
+          transform: CSS.Transform.toString(transform),
+          transition,
+          opacity: isDragging ? 0.85 : 1,
+        }}
+      >
+        {getSectionIcon(section.id)}
+        <span className="truncate">{section.genericName}</span>
+        <span className="ml-auto text-[10px] font-mono text-muted-foreground">drag</span>
+      </div>
+    );
+  }
+
   const SidebarContent = (
       <div className="space-y-0">
-          {sections.map(section => (
-              <div 
-                  key={section.id}
-                  onClick={() => scrollToSection(section.id)}
-                  className={cn(
-                      "flex items-center gap-2 px-3 py-2 text-sm font-medium border-l-2 cursor-pointer transition-colors hover:bg-sidebar-accent/50",
-                      "border-transparent text-muted-foreground hover:text-foreground"
-                  )}
-              >
-                  {getSectionIcon(section.id)}
-                  <span className="truncate">{section.genericName}</span>
-              </div>
-          ))}
-          
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(event: DragEndEvent) => {
+            const { active, over } = event;
+            if (!over) return;
+            if (active.id === over.id) return;
+
+            setSections((prev) => {
+              const oldIndex = prev.findIndex((s) => s.id === active.id);
+              const newIndex = prev.findIndex((s) => s.id === over.id);
+              if (oldIndex === -1 || newIndex === -1) return prev;
+              return arrayMove(prev, oldIndex, newIndex);
+            });
+          }}
+        >
+          <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
+            {sectionIds.map((id) => (
+              <SortableNavRow key={id} sectionId={id} />
+            ))}
+          </SortableContext>
+        </DndContext>
+
           <Button
             data-testid="button-add-bucket"
             variant="ghost"

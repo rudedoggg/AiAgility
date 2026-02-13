@@ -1,4 +1,19 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages } from "@/lib/mockData";
@@ -60,27 +75,69 @@ export default function DeliverablesPage() {
       }, 50);
   };
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const deliverableIds = useMemo(() => deliverables.map((d) => d.id), [deliverables]);
+
+  function SortableNavRow({ deliverableId }: { deliverableId: string }) {
+    const doc = deliverables.find((d) => d.id === deliverableId);
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: deliverableId });
+
+    if (!doc) return null;
+
+    return (
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        data-testid={`nav-row-${doc.id}`}
+        onClick={() => scrollToDeliverable(doc.id)}
+        className={cn(
+          "flex flex-col gap-0.5 px-3 py-2 rounded-sm cursor-pointer transition-colors border-l-2 select-none",
+          "border-transparent text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50",
+          isDragging && "bg-sidebar-accent/60 text-foreground"
+        )}
+        style={{
+          transform: CSS.Transform.toString(transform),
+          transition,
+          opacity: isDragging ? 0.85 : 1,
+        }}
+      >
+        <div className="flex items-center justify-between text-sm font-medium">
+          <span className="truncate">{doc.title}</span>
+          {doc.engaged && <CheckSquare className="w-3 h-3 text-primary shrink-0" />}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] uppercase tracking-wider">{doc.status}</span>
+        </div>
+      </div>
+    );
+  }
+
   const SidebarContent = (
       <div className="space-y-0">
-          {deliverables.map(doc => (
-              <div 
-                  key={doc.id}
-                  onClick={() => scrollToDeliverable(doc.id)}
-                  className={cn(
-                      "flex flex-col gap-0.5 px-3 py-2 rounded-sm cursor-pointer transition-colors border-l-2 hover:bg-sidebar-accent/50",
-                      "border-transparent text-muted-foreground hover:text-foreground"
-                  )}
-              >
-                  <div className="flex items-center justify-between text-sm font-medium">
-                      <span className="truncate">{doc.title}</span>
-                      {doc.engaged && <CheckSquare className="w-3 h-3 text-primary shrink-0" />}
-                  </div>
-                  <div className="flex items-center gap-2">
-                       <span className="text-[9px] uppercase tracking-wider">{doc.status}</span>
-                  </div>
-              </div>
-          ))}
-          
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(event: DragEndEvent) => {
+            const { active, over } = event;
+            if (!over) return;
+            if (active.id === over.id) return;
+
+            setDeliverables((prev) => {
+              const oldIndex = prev.findIndex((d) => d.id === active.id);
+              const newIndex = prev.findIndex((d) => d.id === over.id);
+              if (oldIndex === -1 || newIndex === -1) return prev;
+              return arrayMove(prev, oldIndex, newIndex);
+            });
+          }}
+        >
+          <SortableContext items={deliverableIds} strategy={verticalListSortingStrategy}>
+            {deliverableIds.map((id) => (
+              <SortableNavRow key={id} deliverableId={id} />
+            ))}
+          </SortableContext>
+        </DndContext>
+
           <Button
             data-testid="button-add-bucket"
             variant="ghost"

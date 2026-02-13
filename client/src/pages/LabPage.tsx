@@ -1,4 +1,19 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages } from "@/lib/mockData";
@@ -57,22 +72,65 @@ export default function LabPage() {
       }, 50);
   };
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const bucketIds = useMemo(() => buckets.map((b) => b.id), [buckets]);
+
+  function SortableNavRow({ bucketId }: { bucketId: string }) {
+    const bucket = buckets.find((b) => b.id === bucketId);
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bucketId });
+
+    if (!bucket) return null;
+
+    return (
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        data-testid={`nav-row-${bucket.id}`}
+        onClick={() => scrollToBucket(bucket.id)}
+        className={cn(
+          "flex items-center gap-2 px-3 py-2 text-sm font-medium border-l-2 cursor-pointer transition-colors select-none",
+          "border-transparent text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50",
+          isDragging && "bg-sidebar-accent/60 text-foreground"
+        )}
+        style={{
+          transform: CSS.Transform.toString(transform),
+          transition,
+          opacity: isDragging ? 0.85 : 1,
+        }}
+      >
+        <Folder className="w-3.5 h-3.5" />
+        <span className="truncate flex-1">{bucket.name}</span>
+        <span className="text-[10px] bg-sidebar-border px-1.5 rounded-sm">{bucket.items.length}</span>
+      </div>
+    );
+  }
+
   const SidebarContent = (
       <div className="space-y-0">
-          {buckets.map(bucket => (
-              <div 
-                  key={bucket.id}
-                  onClick={() => scrollToBucket(bucket.id)}
-                  className={cn(
-                      "flex items-center gap-2 px-3 py-2 text-sm font-medium border-l-2 cursor-pointer transition-colors hover:bg-sidebar-accent/50",
-                      "border-transparent text-muted-foreground hover:text-foreground"
-                  )}
-              >
-                  <Folder className="w-3.5 h-3.5" />
-                  <span className="truncate flex-1">{bucket.name}</span>
-                  <span className="text-[10px] bg-sidebar-border px-1.5 rounded-sm">{bucket.items.length}</span>
-              </div>
-          ))}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(event: DragEndEvent) => {
+            const { active, over } = event;
+            if (!over) return;
+            if (active.id === over.id) return;
+
+            setBuckets((prev) => {
+              const oldIndex = prev.findIndex((b) => b.id === active.id);
+              const newIndex = prev.findIndex((b) => b.id === over.id);
+              if (oldIndex === -1 || newIndex === -1) return prev;
+              return arrayMove(prev, oldIndex, newIndex);
+            });
+          }}
+        >
+          <SortableContext items={bucketIds} strategy={verticalListSortingStrategy}>
+            {bucketIds.map((id) => (
+              <SortableNavRow key={id} bucketId={id} />
+            ))}
+          </SortableContext>
+        </DndContext>
+
           <Button
             data-testid="button-add-bucket"
             variant="ghost"
