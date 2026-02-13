@@ -8,6 +8,12 @@ import { getProjectTemplates } from "@/lib/projectTemplates";
 
 function getProjectSummaryFromStorage(projectId: string) {
   try {
+    const seeded = window.localStorage.getItem(`agilityai:generatedTemplate:${projectId}`);
+    if (seeded) {
+      const parsed = JSON.parse(seeded);
+      if (parsed && typeof parsed.executiveSummary === "string") return parsed.executiveSummary;
+    }
+
     return window.localStorage.getItem(`agilityai:projectSummary:${projectId}`) || "";
   } catch {
     return "";

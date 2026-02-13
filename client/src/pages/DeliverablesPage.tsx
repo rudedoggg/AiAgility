@@ -48,8 +48,29 @@ export default function DeliverablesPage() {
       setActiveProject(p);
 
       const nextTemplate = templates[p.id];
-      setMessages(nextTemplate ? baseMessages : mockMessages);
-      setDeliverables(nextTemplate ? nextTemplate.deliverables.deliverables.map(d => ({...d, isOpen: true, items: (d as any).items || [], bucketMessages: (d as any).bucketMessages || [], completeness: (d as any).completeness ?? 50, subtitle: (d as any).subtitle || ''})) : []);
+
+      if (nextTemplate) {
+        setMessages(baseMessages);
+        setDeliverables(nextTemplate.deliverables.deliverables.map(d => ({...d, isOpen: true, items: (d as any).items || [], bucketMessages: (d as any).bucketMessages || [], completeness: (d as any).completeness ?? 50, subtitle: (d as any).subtitle || ''})));
+        return;
+      }
+
+      let generated: any = null;
+      try {
+        const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${p.id}`);
+        generated = raw ? JSON.parse(raw) : null;
+      } catch {
+        generated = null;
+      }
+
+      if (generated?.deliverables?.deliverables) {
+        setMessages(baseMessages);
+        setDeliverables(generated.deliverables.deliverables.map((d: any) => ({...d, isOpen: true, items: d.items || [], bucketMessages: d.bucketMessages || [], completeness: d.completeness ?? 50, subtitle: d.subtitle || ''})));
+        return;
+      }
+
+      setMessages(mockMessages);
+      setDeliverables([]);
     });
     return () => unsub();
   }, [baseMessages, templates]);
@@ -80,7 +101,8 @@ export default function DeliverablesPage() {
 
   function SortableNavRow({ deliverableId }: { deliverableId: string }) {
     const doc = deliverables.find((d) => d.id === deliverableId);
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: deliverableId });
+    const sortable = useSortable({ id: deliverableId });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
 
     if (!doc) return null;
 

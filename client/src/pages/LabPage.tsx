@@ -47,8 +47,29 @@ export default function LabPage() {
       setActiveProject(p);
 
       const nextTemplate = templates[p.id];
-      setMessages(nextTemplate ? baseMessages : mockMessages);
-      setBuckets(nextTemplate ? nextTemplate.lab.buckets.map(b => ({ ...b, bucketMessages: (b as any).bucketMessages || [] })) : []);
+
+      if (nextTemplate) {
+        setMessages(baseMessages);
+        setBuckets(nextTemplate.lab.buckets.map(b => ({ ...b, bucketMessages: (b as any).bucketMessages || [] })));
+        return;
+      }
+
+      let generated: any = null;
+      try {
+        const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${p.id}`);
+        generated = raw ? JSON.parse(raw) : null;
+      } catch {
+        generated = null;
+      }
+
+      if (generated?.lab?.buckets) {
+        setMessages(baseMessages);
+        setBuckets(generated.lab.buckets.map((b: any) => ({ ...b, bucketMessages: b.bucketMessages || [] })));
+        return;
+      }
+
+      setMessages(mockMessages);
+      setBuckets([]);
     });
     return () => unsub();
   }, [baseMessages, templates]);
@@ -77,7 +98,8 @@ export default function LabPage() {
 
   function SortableNavRow({ bucketId }: { bucketId: string }) {
     const bucket = buckets.find((b) => b.id === bucketId);
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: bucketId });
+    const sortable = useSortable({ id: bucketId });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
 
     if (!bucket) return null;
 

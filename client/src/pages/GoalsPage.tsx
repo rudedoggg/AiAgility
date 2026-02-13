@@ -61,8 +61,29 @@ export default function GoalsPage() {
       setActiveProject(p);
 
       const nextTemplate = templates[p.id];
-      setMessages(nextTemplate ? baseMessages : mockMessages);
-      setSections(nextTemplate ? nextTemplate.goals.sections.map(s => ({ ...s, items: s.items || [], bucketMessages: (s as any).bucketMessages || [] })) : []);
+
+      if (nextTemplate) {
+        setMessages(baseMessages);
+        setSections(nextTemplate.goals.sections.map(s => ({ ...s, items: s.items || [], bucketMessages: (s as any).bucketMessages || [] })));
+        return;
+      }
+
+      let generated: any = null;
+      try {
+        const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${p.id}`);
+        generated = raw ? JSON.parse(raw) : null;
+      } catch {
+        generated = null;
+      }
+
+      if (generated?.goals?.sections) {
+        setMessages(baseMessages);
+        setSections(generated.goals.sections.map((s: any) => ({ ...s, items: s.items || [], bucketMessages: s.bucketMessages || [] })));
+        return;
+      }
+
+      setMessages(mockMessages);
+      setSections([]);
     });
     return () => unsub();
   }, [baseMessages, templates]);
@@ -115,7 +136,8 @@ export default function GoalsPage() {
 
   function SortableNavRow({ sectionId }: { sectionId: string }) {
     const section = sections.find((s) => s.id === sectionId);
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sectionId });
+    const sortable = useSortable({ id: sectionId });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
 
     if (!section) return null;
 

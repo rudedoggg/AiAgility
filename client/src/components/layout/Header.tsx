@@ -3,6 +3,118 @@ import { Link, useLocation } from "wouter";
 import { ChevronDown, FolderPlus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getSelectedProject, setSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
+
+function generateTemplateFromSnippet(projectName: string, snippet: string) {
+  const cleaned = snippet.replace(/\s+/g, " ").trim();
+  const focus = cleaned.split(/[.?!]/)[0]?.slice(0, 140) || cleaned.slice(0, 140);
+
+  const makeDate = () => new Date().toLocaleDateString([], { month: "short", day: "numeric" });
+
+  return {
+    executiveSummary: `# Executive Summary — ${projectName}\n\n## Summary (Seed)\n${snippet}\n\n## Standing Question\nGive me a two-page executive summary of this project.\n`,
+    goals: {
+      summary: {
+        status: `Seeded from the project summary. Next: turn the narrative into explicit goals + constraints.` ,
+        done: ["Project seeded"],
+        undone: ["Define objective", "List constraints"],
+        nextSteps: ["Create 3 goal sections", "Add stakeholders"],
+      },
+      sections: [
+        {
+          id: "context",
+          genericName: "Context",
+          subtitle: "What’s happening and why now",
+          completeness: 35,
+          totalItems: 3,
+          completedItems: 1,
+          content: cleaned,
+          items: [{ id: `seed-${Date.now()}`, type: "note", title: "Seed summary", preview: snippet, date: makeDate() }],
+          isOpen: true,
+        },
+        {
+          id: "objective",
+          genericName: "Objective",
+          subtitle: "What outcome are we driving",
+          completeness: 10,
+          totalItems: 3,
+          completedItems: 0,
+          content: focus ? `Draft objective: ${focus}` : "Draft objective (TBD)",
+          items: [],
+          isOpen: false,
+        },
+        {
+          id: "stakeholders",
+          genericName: "Stakeholders",
+          subtitle: "Who must agree / who is impacted",
+          completeness: 0,
+          totalItems: 3,
+          completedItems: 0,
+          content: "(TBD)",
+          items: [],
+          isOpen: false,
+        },
+        {
+          id: "constraints",
+          genericName: "Constraints",
+          subtitle: "Budget, timing, non-negotiables",
+          completeness: 0,
+          totalItems: 3,
+          completedItems: 0,
+          content: "(TBD)",
+          items: [],
+          isOpen: false,
+        },
+      ],
+    },
+    lab: {
+      summary: {
+        status: `Create buckets that capture the evidence needed to support: “${focus || "the decision"}”.`,
+        done: [],
+        undone: ["Add first evidence bucket"],
+        nextSteps: ["Add sources", "Log assumptions"],
+      },
+      buckets: [
+        {
+          id: "research",
+          name: "Sources + Evidence",
+          isOpen: true,
+          items: [{ id: `seed-src-${Date.now()}`, type: "note", title: "What we know so far", preview: snippet, date: makeDate() }],
+          bucketMessages: [],
+        },
+        {
+          id: "interviews",
+          name: "Open Questions",
+          isOpen: false,
+          items: [{ id: `seed-q-${Date.now() + 1}`, type: "note", title: "Questions to answer", preview: "(TBD)", date: makeDate() }],
+          bucketMessages: [],
+        },
+      ],
+    },
+    deliverables: {
+      summary: {
+        status: "Draft deliverables now, then backfill evidence and tighten the narrative.",
+        done: [],
+        undone: ["Create deliverable outline"],
+        nextSteps: ["Draft v1", "Attach memory items"],
+      },
+      deliverables: [
+        {
+          id: "1",
+          title: "Decision / Plan Draft",
+          subtitle: "Seeded from summary",
+          completeness: 15,
+          status: "draft",
+          lastEdited: "Just now",
+          engaged: true,
+          items: [{ id: `seed-deliv-${Date.now()}`, type: "note", title: "Seed summary", preview: snippet, date: makeDate() }],
+          content: `# ${projectName}\n\n## Seed Summary\n${snippet}\n\n## Draft\n(TBD)\n`,
+          bucketMessages: [],
+          isOpen: true,
+        },
+      ],
+    },
+  };
+}
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,15 +127,38 @@ export function Header() {
   const [location] = useLocation();
   const [projectName, setProjectName] = useState(getSelectedProject().name);
 
-  const [projects, setProjects] = useState<{ id: string; name: string }[]>([
-    { id: "p-1", name: "Office Location Decision" },
-    { id: "p-2", name: "Commute Impact Study" },
-    { id: "p-3", name: "Board Memo Draft" },
-  ]);
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>(() => {
+    try {
+      const raw = window.localStorage.getItem("agilityai:projects");
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed
+          .filter((p) => p && typeof p.id === "string" && typeof p.name === "string")
+          .map((p) => ({ id: p.id, name: p.name }));
+        if (cleaned.length) return cleaned;
+      }
+    } catch {
+      // ignore
+    }
+
+    return [
+      { id: "p-1", name: "Office Location Decision" },
+      { id: "p-2", name: "Commute Impact Study" },
+      { id: "p-3", name: "Board Memo Draft" },
+    ];
+  });
 
   useEffect(() => {
     return subscribeToSelectedProject((p) => setProjectName(p.name));
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("agilityai:projects", JSON.stringify(projects));
+    } catch {
+      // ignore
+    }
+  }, [projects]);
 
   const navItems = [
     { label: "Dashboard", path: "/dashboard" },
@@ -94,6 +229,15 @@ export function Header() {
 
                 try {
                   window.localStorage.setItem(`agilityai:projectSummary:${id}`, summary);
+                } catch {
+                  // ignore
+                }
+
+                try {
+                  const snippet = summary.trim();
+                  if (snippet) {
+                    window.localStorage.setItem(`agilityai:generatedTemplate:${id}`, JSON.stringify(generateTemplateFromSnippet(name, snippet)));
+                  }
                 } catch {
                   // ignore
                 }
