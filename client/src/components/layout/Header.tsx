@@ -6,8 +6,8 @@ export function Header() {
   const [location] = useLocation();
 
   const navItems = [
-    { label: "Goals", path: "/" },
     { label: "Dashboard", path: "/dashboard" },
+    { label: "Goals", path: "/" },
     { label: "Lab", path: "/lab" },
     { label: "Deliverables", path: "/deliverables" },
   ];
