@@ -4,7 +4,7 @@ import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages, mockSections } from "@/lib/mockData";
 import { Message, Section } from "@/lib/types";
 import { ChevronRight, Target, Flag, Users, AlertTriangle, Circle, ChevronDown, StickyNote, Upload, Link2, RefreshCw, Trash2, FileText as FileTextIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getBucketProgressPercent } from "@/lib/utils";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -137,10 +137,17 @@ export default function GoalsPage() {
                                     <span className="text-sm text-muted-foreground">{section.subtitle}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+                                    <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden" data-testid={`progress-${section.id}`}>
                                         <div 
                                             className="h-full bg-primary/80" 
-                                            style={{ width: `${section.completeness}%` }}
+                                            style={{
+                                                width: `${getBucketProgressPercent({
+                                                    explicitPercent: section.completeness,
+                                                    completedItems: section.completedItems,
+                                                    totalItems: section.totalItems,
+                                                    itemsCount: (section.items || []).length,
+                                                })}%`,
+                                            }}
                                         />
                                     </div>
 

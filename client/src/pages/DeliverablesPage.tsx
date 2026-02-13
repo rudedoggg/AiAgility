@@ -4,7 +4,7 @@ import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages, mockDeliverables } from "@/lib/mockData";
 import { Message, Deliverable } from "@/lib/types";
 import { FileText, Download, Share2, CheckSquare, Edit3, ChevronRight, StickyNote, Upload, Link2, RefreshCw, Trash2, FileText as FileTextIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getBucketProgressPercent } from "@/lib/utils";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -109,7 +109,12 @@ export default function DeliverablesPage() {
                                     <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden" data-testid={`progress-${doc.id}`}>
                                         <div
                                             className="h-full bg-primary/80"
-                                            style={{ width: `${(doc as any).completeness ?? 50}%` }}
+                                            style={{
+                                                width: `${getBucketProgressPercent({
+                                                    explicitPercent: (doc as any).completeness,
+                                                    itemsCount: (((doc as any).items || []) as any[]).length,
+                                                })}%`,
+                                            }}
                                         />
                                     </div>
 

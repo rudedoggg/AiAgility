@@ -4,7 +4,7 @@ import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
 import { mockMessages, mockBuckets } from "@/lib/mockData";
 import { Message, Bucket } from "@/lib/types";
 import { FileText, Link as LinkIcon, MessageSquare, StickyNote, FolderOpen, Folder, Plus, ChevronRight, Upload, Link2, RefreshCw, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getBucketProgressPercent } from "@/lib/utils";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -95,7 +95,11 @@ export default function LabPage() {
                                     <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden" data-testid={`progress-${bucket.id}`}>
                                         <div
                                             className="h-full bg-primary/80"
-                                            style={{ width: `${Math.min(100, Math.round((bucket.items.length / 8) * 100))}%` }}
+                                            style={{
+                                                width: `${getBucketProgressPercent({
+                                                    itemsCount: bucket.items.length,
+                                                })}%`,
+                                            }}
                                         />
                                     </div>
 
