@@ -298,9 +298,12 @@ export function Header() {
               Settings
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem data-testid="menu-settings-preferences" onSelect={() => window.alert("Preferences (mock)")}>Preferences</DropdownMenuItem>
-            <DropdownMenuItem data-testid="menu-settings-notifications" onSelect={() => window.alert("Notifications (mock)")}>Notifications</DropdownMenuItem>
-            <DropdownMenuItem data-testid="menu-settings-billing" onSelect={() => window.alert("Billing (mock)")}>Billing</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-workspace" onSelect={() => window.alert("Workspace settings (mock)")}>Workspace</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-project" onSelect={() => window.alert("Project settings (mock)")}>Project Settings</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-members" onSelect={() => window.alert("Members & roles (mock)")}>Members & Roles</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-integrations" onSelect={() => window.alert("Integrations (mock)")}>Integrations</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem data-testid="menu-settings-keyboard" onSelect={() => window.alert("Keyboard shortcuts (mock)")}>Keyboard Shortcuts</DropdownMenuItem>
             <DropdownMenuItem data-testid="menu-settings-help" onSelect={() => window.alert("Help & Support (mock)")}>Help & Support</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
