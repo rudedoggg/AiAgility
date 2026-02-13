@@ -28,7 +28,7 @@ function getSectionIcon(id: string) {
 
 export default function GoalsPage() {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
-  const [sections, setSections] = useState<Section[]>(mockSections.map(s => ({ ...s, items: s.items || [] })));
+  const [sections, setSections] = useState<Section[]>(mockSections.map(s => ({ ...s, items: s.items || [], bucketMessages: (s as any).bucketMessages || [] })));
   const sectionRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -259,16 +259,49 @@ export default function GoalsPage() {
                                         transition={{ duration: 0.2 }}
                                     >
                                         <div className="flex h-[400px] border-t border-border/50">
-                                            {/* Left Content Column */}
-                                            <div className="w-[60%] p-8 overflow-y-auto border-r border-border/50">
-                                                <div className="prose prose-sm max-w-none text-foreground">
-                                                    {section.content ? (
-                                                        <p className="whitespace-pre-wrap leading-relaxed text-sm">{section.content}</p>
-                                                    ) : (
-                                                        <div className="py-4 text-sm text-muted-foreground italic">
-                                                            No content yet. Ask AI to draft this section.
-                                                        </div>
-                                                    )}
+                                            {/* Left Content Column: Bucket Chat */}
+                                            <div className="w-[60%] border-r border-border/50">
+                                                <div className="h-full flex flex-col">
+                                                    <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-bucket-chat-title-${section.id}`}>Bucket Chat</div>
+                                                    <div className="flex-1 min-h-0">
+                                                        <ChatWorkspace
+                                                            messages={((section as any).bucketMessages || []) as any}
+                                                            onSendMessage={(content) => {
+                                                                const userMsg = {
+                                                                    id: Date.now().toString(),
+                                                                    role: "user" as const,
+                                                                    content,
+                                                                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                                                                };
+
+                                                                const contextLines = [
+                                                                    `Goal Section: ${section.genericName}`,
+                                                                    section.subtitle ? `Subtitle: ${section.subtitle}` : null,
+                                                                    "Attachments:",
+                                                                    ...((section.items || []).slice(0, 8).map((i) => `- [${i.type}] ${i.title}`)),
+                                                                ].filter(Boolean);
+
+                                                                const aiMsg = {
+                                                                    id: (Date.now() + 1).toString(),
+                                                                    role: "ai" as const,
+                                                                    content: `Got it. I’m only using this section’s context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}`,
+                                                                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                                                                };
+
+                                                                setSections((prev) =>
+                                                                    prev.map((s) =>
+                                                                        s.id === section.id
+                                                                            ? {
+                                                                                  ...s,
+                                                                                  bucketMessages: [...(((s as any).bucketMessages || []) as any[]), userMsg, aiMsg],
+                                                                              }
+                                                                            : s
+                                                                    )
+                                                                );
+                                                            }}
+                                                            className="h-full"
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
 

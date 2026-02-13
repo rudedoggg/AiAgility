@@ -15,7 +15,7 @@ import { ScopedHistory } from "@/components/shared/ScopedHistory";
 
 export default function DeliverablesPage() {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
-  const [deliverables, setDeliverables] = useState<Deliverable[]>(mockDeliverables.map(d => ({...d, isOpen: true, items: (d as any).items || [], completeness: (d as any).completeness ?? 50, subtitle: (d as any).subtitle || ''}))); // Default open for demo
+  const [deliverables, setDeliverables] = useState<Deliverable[]>(mockDeliverables.map(d => ({...d, isOpen: true, items: (d as any).items || [], bucketMessages: (d as any).bucketMessages || [], completeness: (d as any).completeness ?? 50, subtitle: (d as any).subtitle || ''}))); // Default open for demo
   const deliverableRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -228,17 +228,51 @@ export default function DeliverablesPage() {
                                         transition={{ duration: 0.2 }}
                                     >
                                         <div className="flex h-[500px] border-t border-border/50">
-                                            {/* Left Content Column */}
-                                            <div className="w-[60%] px-12 pb-8 pt-6 overflow-y-auto border-r border-border/50">
-                                                <article className="prose prose-sm max-w-none prose-headings:font-heading prose-headings:font-bold prose-h1:text-xl prose-h2:text-base prose-p:text-muted-foreground prose-p:leading-relaxed">
-                                                    {/* Quick markdown rendering simulation */}
-                                                    {doc.content.split('\n').map((line, i) => {
-                                                        if (line.startsWith('# ')) return <h1 key={i} className="mb-4">{line.replace('# ', '')}</h1>
-                                                        if (line.startsWith('## ')) return <h2 key={i} className="mt-6 mb-2 text-foreground">{line.replace('## ', '')}</h2>
-                                                        if (line.match(/^\d\./)) return <div key={i} className="ml-4 font-medium text-foreground py-1">{line}</div>
-                                                        return <p key={i} className="my-2 text-sm">{line}</p>
-                                                    })}
-                                                </article>
+                                            {/* Left Content Column: Bucket Chat */}
+                                            <div className="w-[60%] border-r border-border/50">
+                                                <div className="h-full flex flex-col">
+                                                    <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-bucket-chat-title-${doc.id}`}>Bucket Chat</div>
+                                                    <div className="flex-1 min-h-0">
+                                                        <ChatWorkspace
+                                                            messages={(((doc as any).bucketMessages || []) as any)}
+                                                            onSendMessage={(content) => {
+                                                                const userMsg = {
+                                                                    id: Date.now().toString(),
+                                                                    role: "user" as const,
+                                                                    content,
+                                                                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                                                                };
+
+                                                                const contextLines = [
+                                                                    `Deliverable: ${doc.title}`,
+                                                                    (doc as any).subtitle ? `Subtitle: ${(doc as any).subtitle}` : null,
+                                                                    `Status: ${doc.status}`,
+                                                                    "Attachments:",
+                                                                    ...(((((doc as any).items || []) as any[]).slice(0, 8)).map((i: any) => `- [${i.type}] ${i.title}`)),
+                                                                ].filter(Boolean);
+
+                                                                const aiMsg = {
+                                                                    id: (Date.now() + 1).toString(),
+                                                                    role: "ai" as const,
+                                                                    content: `Got it. I’m only using this deliverable’s context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}`,
+                                                                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                                                                };
+
+                                                                setDeliverables((prev) =>
+                                                                    prev.map((d) =>
+                                                                        d.id === doc.id
+                                                                            ? {
+                                                                                  ...d,
+                                                                                  bucketMessages: [...((((d as any).bucketMessages || []) as any[])), userMsg, aiMsg],
+                                                                              }
+                                                                            : d
+                                                                    )
+                                                                );
+                                                            }}
+                                                            className="h-full"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {/* Right Attachments Column */}

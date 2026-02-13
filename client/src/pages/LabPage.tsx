@@ -14,7 +14,7 @@ import { ScopedHistory } from "@/components/shared/ScopedHistory";
 
 export default function LabPage() {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
-  const [buckets, setBuckets] = useState<Bucket[]>(mockBuckets);
+  const [buckets, setBuckets] = useState<Bucket[]>(mockBuckets.map(b => ({ ...b, bucketMessages: (b as any).bucketMessages || [] })));
   const bucketRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -214,11 +214,47 @@ export default function LabPage() {
                                         transition={{ duration: 0.2 }}
                                     >
                                         <div className="flex h-[400px] border-t border-border/50">
-                                            {/* Left Content Column */}
-                                            <div className="w-[60%] p-8 overflow-y-auto border-r border-border/50">
-                                                <div className="prose prose-sm max-w-none text-foreground">
-                                                    <div className="py-4 text-sm text-muted-foreground italic" data-testid={`text-bucket-empty-${bucket.id}`}>
-                                                        No content yet. Ask AI to summarize this bucket or add a note.
+                                            {/* Left Content Column: Bucket Chat */}
+                                            <div className="w-[60%] border-r border-border/50">
+                                                <div className="h-full flex flex-col">
+                                                    <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-bucket-chat-title-${bucket.id}`}>Bucket Chat</div>
+                                                    <div className="flex-1 min-h-0">
+                                                        <ChatWorkspace
+                                                            messages={((bucket as any).bucketMessages || []) as any}
+                                                            onSendMessage={(content) => {
+                                                                const userMsg = {
+                                                                    id: Date.now().toString(),
+                                                                    role: "user" as const,
+                                                                    content,
+                                                                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                                                                };
+
+                                                                const contextLines = [
+                                                                    `Bucket: ${bucket.name}`,
+                                                                    "Attachments:",
+                                                                    ...((bucket.items || []).slice(0, 8).map((i) => `- [${i.type}] ${i.title}`)),
+                                                                ].filter(Boolean);
+
+                                                                const aiMsg = {
+                                                                    id: (Date.now() + 1).toString(),
+                                                                    role: "ai" as const,
+                                                                    content: `Got it. I’m only using this bucket’s context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}`,
+                                                                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                                                                };
+
+                                                                setBuckets((prev) =>
+                                                                    prev.map((b) =>
+                                                                        b.id === bucket.id
+                                                                            ? {
+                                                                                  ...b,
+                                                                                  bucketMessages: [...(((b as any).bucketMessages || []) as any[]), userMsg, aiMsg],
+                                                                              }
+                                                                            : b
+                                                                    )
+                                                                );
+                                                            }}
+                                                            className="h-full"
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
