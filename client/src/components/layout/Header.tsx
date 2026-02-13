@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ChevronDown, FolderPlus, Settings } from "lucide-react";
+import { ChevronDown, FolderPlus, LogOut, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getSelectedProject, setSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 
@@ -282,12 +282,59 @@ export function Header() {
       </nav>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-          <Settings className="w-5 h-5" />
-        </Button>
-        <div className="h-8 w-8 bg-accent rounded-full flex items-center justify-center text-accent-foreground font-medium text-sm">
-          JD
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              data-testid="button-settings"
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid="text-settings-menu-label">
+              Settings
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem data-testid="menu-settings-preferences" onSelect={() => window.alert("Preferences (mock)")}>Preferences</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-notifications" onSelect={() => window.alert("Notifications (mock)")}>Notifications</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-billing" onSelect={() => window.alert("Billing (mock)")}>Billing</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-help" onSelect={() => window.alert("Help & Support (mock)")}>Help & Support</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="h-8 w-8 bg-accent rounded-full flex items-center justify-center text-accent-foreground font-medium text-sm hover:opacity-90 transition-opacity"
+              data-testid="button-user"
+              aria-label="User menu"
+            >
+              JD
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-2">
+              <div className="text-sm font-semibold" data-testid="text-user-name">JD</div>
+              <div className="text-xs text-muted-foreground" data-testid="text-user-email">jd@example.com</div>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem data-testid="menu-user-profile">
+              <User className="w-4 h-4 mr-2" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-user-account">Account</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-user-security">Security</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem data-testid="menu-user-signout">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
