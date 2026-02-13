@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RefreshCw, Folder, FolderOpen, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { setSelectedProject } from "@/lib/projectStore";
 
 type Project = {
   id: string;
@@ -98,6 +99,7 @@ export default function DashboardPage() {
                       onClick={() => {
                         setActiveProjectId(p.id);
                         setExecutiveSummary(generateExecutiveSummary(p.name));
+                        setSelectedProject({ id: p.id, name: p.name });
                       }}
                       className={cn(
                         "w-full text-left rounded-md px-3 py-2 transition-colors border",
