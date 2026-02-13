@@ -7,6 +7,7 @@ export function Header() {
 
   const navItems = [
     { label: "Goals", path: "/" },
+    { label: "Dashboard", path: "/dashboard" },
     { label: "Lab", path: "/lab" },
     { label: "Deliverables", path: "/deliverables" },
   ];
