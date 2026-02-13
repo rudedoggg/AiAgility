@@ -298,10 +298,10 @@ export function Header() {
               Settings
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem data-testid="menu-settings-preferences" onSelect={() => window.alert("Preferences (mock)")}>Preferences</DropdownMenuItem>
-            <DropdownMenuItem data-testid="menu-settings-notifications" onSelect={() => window.alert("Notifications (mock)")}>Notifications</DropdownMenuItem>
-            <DropdownMenuItem data-testid="menu-settings-billing" onSelect={() => window.alert("Billing (mock)")}>Billing</DropdownMenuItem>
-            <DropdownMenuItem data-testid="menu-settings-help" onSelect={() => window.alert("Help & Support (mock)")}>Help & Support</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-preferences" onSelect={() => (window.location.href = "/settings/preferences")}>Preferences</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-notifications" onSelect={() => (window.location.href = "/settings/notifications")}>Notifications</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-billing" onSelect={() => (window.location.href = "/settings/billing")}>Billing</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-settings-help" onSelect={() => (window.location.href = "/support")}>Help & Support</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -322,14 +322,14 @@ export function Header() {
               <div className="text-xs text-muted-foreground" data-testid="text-user-email">jd@example.com</div>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem data-testid="menu-user-profile">
+            <DropdownMenuItem data-testid="menu-user-profile" onSelect={() => (window.location.href = "/account/profile")}>
               <User className="w-4 h-4 mr-2" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem data-testid="menu-user-account">Account</DropdownMenuItem>
-            <DropdownMenuItem data-testid="menu-user-security">Security</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-user-account" onSelect={() => (window.location.href = "/account")}>Account</DropdownMenuItem>
+            <DropdownMenuItem data-testid="menu-user-security" onSelect={() => (window.location.href = "/account/security")}>Security</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem data-testid="menu-user-signout">
+            <DropdownMenuItem data-testid="menu-user-signout" onSelect={() => window.alert("Signed out (mock)")}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign out
             </DropdownMenuItem>
