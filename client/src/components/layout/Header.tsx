@@ -1,12 +1,25 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Settings } from "lucide-react";
+import { ChevronDown, FolderPlus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
+import { getSelectedProject, setSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Header() {
   const [location] = useLocation();
   const [projectName, setProjectName] = useState(getSelectedProject().name);
+
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([
+    { id: "p-1", name: "Office Location Decision" },
+    { id: "p-2", name: "Commute Impact Study" },
+    { id: "p-3", name: "Board Memo Draft" },
+  ]);
 
   useEffect(() => {
     return subscribeToSelectedProject((p) => setProjectName(p.name));
@@ -21,11 +34,65 @@ export function Header() {
 
   return (
     <header className="h-[60px] border-b bg-background flex items-center justify-between px-6 fixed top-0 w-full z-50">
-      <div className="flex items-center gap-2 font-bold text-lg tracking-tight font-heading">
-        <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground">
+      <div className="flex items-center gap-3 font-bold text-lg tracking-tight font-heading">
+        <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground" data-testid="img-app-mark">
           A
         </div>
-        <span>AgilityAI</span>
+        <span data-testid="text-app-name">AgilityAI</span>
+
+        <div className="hidden md:block h-6 w-px bg-border/70" aria-hidden="true" />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              data-testid="dropdown-project-trigger"
+              className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-border/50 bg-background/60 hover:bg-muted/40 transition-colors max-w-[280px]"
+              title={projectName}
+            >
+              <span className="text-sm font-semibold text-foreground/90 truncate">{projectName}</span>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="start" className="w-72">
+            <div className="px-2 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid="text-project-switcher-label">
+              Active projects
+            </div>
+
+            {projects.map((p) => (
+              <DropdownMenuItem
+                key={p.id}
+                data-testid={`menu-project-${p.id}`}
+                onSelect={() => setSelectedProject({ id: p.id, name: p.name })}
+              >
+                <span className="truncate">{p.name}</span>
+                {p.name === projectName && (
+                  <span className="ml-auto text-[10px] font-mono text-muted-foreground" data-testid={`text-project-active-${p.id}`}>
+                    active
+                  </span>
+                )}
+              </DropdownMenuItem>
+            ))}
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              data-testid="menu-project-new"
+              onSelect={() => {
+                const name = window.prompt("Project name", "New Project");
+                if (!name) return;
+                const id = `p-${Date.now()}`;
+                const next = { id, name };
+                setProjects((prev) => [next, ...prev]);
+                setSelectedProject(next);
+              }}
+            >
+              <FolderPlus className="w-4 h-4 mr-2" />
+              New Project
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <nav className="flex items-center bg-muted/50 p-1 rounded-lg">
@@ -42,15 +109,6 @@ export function Header() {
           </div>
         </Link>
 
-        <div className="mx-2 h-6 w-px bg-border/60" aria-hidden="true" />
-        <div
-          className="px-2.5 py-1.5 text-sm font-semibold text-foreground/90 rounded-md bg-background/60 border border-border/40 max-w-[260px] truncate"
-          data-testid="text-selected-project"
-          title={projectName}
-        >
-          {projectName}
-        </div>
-        <div className="mx-2 h-6 w-px bg-border/60" aria-hidden="true" />
 
         {navItems.slice(1).map((item) => (
           <Link key={item.path} href={item.path}>

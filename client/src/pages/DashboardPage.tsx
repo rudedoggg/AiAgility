@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { SummaryCard } from "@/components/shared/SummaryCard";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { RefreshCw, Folder, FolderOpen, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { RefreshCw } from "lucide-react";
 import { getSelectedProject, setSelectedProject } from "@/lib/projectStore";
 
 type Project = {
@@ -94,71 +92,7 @@ export default function DashboardPage() {
     <div className="h-screen w-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
       <Header />
       <div className="flex-1 pt-[60px] h-full overflow-hidden w-full">
-        <div className="h-full w-full grid grid-cols-[320px_1fr]">
-          {/* Left: Projects */}
-          <div className="bg-sidebar border-r flex flex-col min-h-0">
-            <div className="p-3 border-b bg-sidebar-accent/30 h-[40px] flex items-center shrink-0">
-              <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider" data-testid="text-projects-title">
-                Projects
-              </h2>
-            </div>
-
-            <ScrollArea className="flex-1">
-              <div className="p-2 space-y-1">
-                {projects.map((p) => {
-                  const active = p.id === activeProjectId;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      data-testid={`button-project-${p.id}`}
-                      onClick={() => {
-                        setActiveProjectId(p.id);
-                        setExecutiveSummary(generateExecutiveSummary(p.name));
-                        setSelectedProject({ id: p.id, name: p.name });
-                      }}
-                      className={cn(
-                        "w-full text-left rounded-md px-3 py-2 transition-colors border",
-                        active
-                          ? "bg-background border-border shadow-sm"
-                          : "bg-transparent border-transparent hover:bg-sidebar-accent/40 hover:border-border/40"
-                      )}
-                    >
-                      <div className="flex items-start gap-2">
-                        {active ? (
-                          <FolderOpen className="w-4 h-4 text-primary mt-0.5" />
-                        ) : (
-                          <Folder className="w-4 h-4 text-muted-foreground mt-0.5" />
-                        )}
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold text-foreground truncate" data-testid={`text-project-name-${p.id}`}>
-                            {p.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground" data-testid={`text-project-created-${p.id}`}>
-                            {p.createdAtLabel}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-
-            <div className="p-3 border-t bg-sidebar/50">
-              <Button
-                data-testid="button-new-project"
-                variant="secondary"
-                className="w-full justify-center gap-2"
-                onClick={handleNewProject}
-              >
-                <Plus className="w-4 h-4" />
-                New Project
-              </Button>
-            </div>
-          </div>
-
-          {/* Right: Dashboard */}
+        <div className="h-full w-full">
           <div className="min-h-0 h-full overflow-hidden">
             <div className="h-full flex flex-col">
               <div className="p-6 border-b">
