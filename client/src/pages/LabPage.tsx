@@ -73,8 +73,33 @@ export default function LabPage() {
                   <span className="text-[10px] bg-sidebar-border px-1.5 rounded-sm">{bucket.items.length}</span>
               </div>
           ))}
-          <Button variant="ghost" size="sm" className="w-full justify-start px-3 mt-2 text-xs text-muted-foreground hover:text-primary">
-              + New Knowledge Bucket
+          <Button
+            data-testid="button-add-bucket"
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start px-3 mt-2 text-xs text-muted-foreground hover:text-primary"
+            onClick={() => {
+              const name = window.prompt("New knowledge bucket", "New bucket");
+              if (!name) return;
+
+              const id = `bucket-${Date.now()}`;
+              setBuckets((prev) => [
+                {
+                  id,
+                  name,
+                  isOpen: true,
+                  items: [],
+                  bucketMessages: [],
+                } as any,
+                ...prev,
+              ]);
+
+              setTimeout(() => {
+                bucketRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 50);
+            }}
+          >
+            + New Knowledge Bucket
           </Button>
       </div>
   );

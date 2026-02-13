@@ -111,8 +111,37 @@ export default function GoalsPage() {
               </div>
           ))}
           
-          <Button variant="ghost" size="sm" className="w-full justify-start px-3 mt-2 text-xs text-muted-foreground hover:text-primary">
-              + Add Goal Section
+          <Button
+            data-testid="button-add-bucket"
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start px-3 mt-2 text-xs text-muted-foreground hover:text-primary"
+            onClick={() => {
+              const name = window.prompt("New goal section", "New section");
+              if (!name) return;
+
+              const id = `section-${Date.now()}`;
+              setSections((prev) => [
+                {
+                  id,
+                  genericName: name,
+                  subtitle: "(draft)",
+                  completeness: 0,
+                  totalItems: 0,
+                  completedItems: 0,
+                  content: "",
+                  items: [],
+                  isOpen: true,
+                },
+                ...prev,
+              ]);
+
+              setTimeout(() => {
+                sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 50);
+            }}
+          >
+            + Add Goal Section
           </Button>
       </div>
   );

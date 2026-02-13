@@ -81,8 +81,39 @@ export default function DeliverablesPage() {
               </div>
           ))}
           
-          <Button variant="ghost" size="sm" className="w-full justify-start px-3 mt-2 text-xs text-muted-foreground hover:text-primary">
-              + New Deliverable
+          <Button
+            data-testid="button-add-bucket"
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start px-3 mt-2 text-xs text-muted-foreground hover:text-primary"
+            onClick={() => {
+              const name = window.prompt("New deliverable", "New deliverable");
+              if (!name) return;
+
+              const id = `deliv-${Date.now()}`;
+              setDeliverables((prev) => [
+                {
+                  id,
+                  title: name,
+                  subtitle: "(draft)",
+                  completeness: 0,
+                  status: "draft",
+                  lastEdited: "Just now",
+                  content: "# " + name + "\n\n(TBD)",
+                  items: [],
+                  engaged: false,
+                  isOpen: true,
+                  bucketMessages: [],
+                } as any,
+                ...prev,
+              ]);
+
+              setTimeout(() => {
+                deliverableRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 50);
+            }}
+          >
+            + New Deliverable
           </Button>
       </div>
   );
