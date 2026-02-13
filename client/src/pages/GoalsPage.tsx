@@ -212,10 +212,10 @@ export default function GoalsPage() {
             <div className="flex flex-col h-full">
                 <SummaryCard 
                     title="Goals Status"
-                    status="Goals are currently 60% defined. The primary objective is clear, but constraints need specific financial limits."
-                    done={["Context defined", "Objective drafted"]}
-                    undone={["Stakeholder list incomplete", "Financial constraints undefined"]}
-                    nextSteps={["Review financial constraints", "Confirm stakeholder list with CEO"]}
+                    status={template?.goals.summary.status || "New project is empty. Add your first goal section to get started."}
+                    done={template?.goals.summary.done || []}
+                    undone={template?.goals.summary.undone || ["Add your first goal section"]}
+                    nextSteps={template?.goals.summary.nextSteps || ["Define objective", "Add constraints"]}
                 />
                 <ChatWorkspace 
                     messages={messages} 

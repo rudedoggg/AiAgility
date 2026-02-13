@@ -183,10 +183,10 @@ export default function DeliverablesPage() {
             <div className="flex flex-col h-full">
                  <SummaryCard 
                     title="Deliverables Status"
-                    status="Drafting phase. Board Memo is in progress. Commute analysis requires data."
-                    done={["Board Memo structure created"]}
-                    undone={["Commute analysis data input", "Final review of Memo"]}
-                    nextSteps={["Complete Commute Analysis", "Draft Executive Summary"]}
+                    status={template?.deliverables.summary.status || "New project is empty. Add your first deliverable to get started."}
+                    done={template?.deliverables.summary.done || []}
+                    undone={template?.deliverables.summary.undone || ["Add your first deliverable"]}
+                    nextSteps={template?.deliverables.summary.nextSteps || ["Outline deliverable", "Collect memory items"]}
                 />
                  <ChatWorkspace
                     messages={messages}

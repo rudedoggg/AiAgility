@@ -3,7 +3,8 @@ import { Header } from "@/components/layout/Header";
 import { SummaryCard } from "@/components/shared/SummaryCard";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { getSelectedProject, setSelectedProject } from "@/lib/projectStore";
+import { getSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
+import { getProjectTemplates } from "@/lib/projectTemplates";
 
 type Project = {
   id: string;
@@ -37,6 +38,8 @@ Key strengths of the current approach include consistent UX patterns across sect
 }
 
 export default function DashboardPage() {
+  const { templates } = getProjectTemplates();
+
   const [projects, setProjects] = useState<Project[]>([
     { id: "p-1", name: "Office Location Decision", createdAtLabel: "Created Feb 7" },
     { id: "p-2", name: "Commute Impact Study", createdAtLabel: "Created Feb 9" },
@@ -48,20 +51,25 @@ export default function DashboardPage() {
     const exists = projects.some((p) => p.id === initialSelected.id);
     return exists ? initialSelected.id : (projects[0]?.id || "");
   });
+
+  useEffect(() => {
+    const unsub = subscribeToSelectedProject((p) => {
+      setActiveProjectId(p.id);
+    });
+    return () => unsub();
+  }, []);
+
   const activeProject = useMemo(() => projects.find((p) => p.id === activeProjectId) || projects[0], [projects, activeProjectId]);
 
   const [executiveSummary, setExecutiveSummary] = useState<string>(() => {
-    const initialProject = projects.find((p) => p.id === initialSelected.id) || projects[0];
-    return initialProject ? generateExecutiveSummary(initialProject?.name || "Project") : "";
+    const initialTemplate = templates[initialSelected.id];
+    return initialTemplate ? initialTemplate.executiveSummary : "";
   });
 
   useEffect(() => {
-    if (activeProject) setSelectedProject({ id: activeProject.id, name: activeProject.name });
-  }, [activeProject?.id]);
-
-  useEffect(() => {
-    if (activeProject) setExecutiveSummary(generateExecutiveSummary(activeProject.name));
-  }, [activeProject?.id]);
+    const t = templates[activeProjectId];
+    setExecutiveSummary(t ? t.executiveSummary : "");
+  }, [activeProjectId, templates]);
 
   const handleNewProject = () => {
     const name = window.prompt("Project name", "New Project");
@@ -75,13 +83,12 @@ export default function DashboardPage() {
 
     setProjects((prev) => [p, ...prev]);
     setActiveProjectId(p.id);
-    setExecutiveSummary(generateExecutiveSummary(p.name));
-    setSelectedProject({ id: p.id, name: p.name });
+    setExecutiveSummary("");
   };
 
   const handleRefreshSummary = () => {
-    const projectName = activeProject?.name || "Project";
-    const refreshed = generateExecutiveSummary(projectName)
+    const t = templates[activeProjectId];
+    const refreshed = (t?.executiveSummary || generateExecutiveSummary(activeProject?.name || "Project"))
       .replace("(Draft)", "(Draft • refreshed)")
       .replace("## Standing Question", `## Standing Question\n(Refreshed ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`);
 

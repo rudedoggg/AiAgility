@@ -170,10 +170,10 @@ export default function LabPage() {
             <div className="flex flex-col h-full">
                  <SummaryCard 
                     title="Lab Status"
-                    status="Research phase active. Market data is well-populated, but stakeholder feedback is sparse."
-                    done={["Collected market reports", "Competitor analysis linked"]}
-                    undone={["Employee survey pending", "CEO interview notes missing"]}
-                    nextSteps={["Import survey results", "Schedule CEO interview"]}
+                    status={template?.lab.summary.status || "New project is empty. Add your first knowledge bucket to get started."}
+                    done={template?.lab.summary.done || []}
+                    undone={template?.lab.summary.undone || ["Add your first knowledge bucket"]}
+                    nextSteps={template?.lab.summary.nextSteps || ["Capture key sources", "Create an assumptions bucket"]}
                  />
                  <ChatWorkspace
                     messages={messages}
