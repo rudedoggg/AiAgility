@@ -3,8 +3,11 @@ import { pgTable, text, varchar, integer, boolean, timestamp, jsonb } from "driz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export * from "./models/auth";
+
 export const projects = pgTable("projects", {
   id: varchar("id", { length: 64 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }),
   name: text("name").notNull(),
   summary: text("summary").notNull().default(""),
   executiveSummary: text("executive_summary").notNull().default(""),

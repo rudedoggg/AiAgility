@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ChevronDown, FolderPlus, LogOut, Settings, User } from "lucide-react";
+import { ChevronDown, FolderPlus, LogOut, Settings, User, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getSelectedProject, setSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 
@@ -101,6 +102,14 @@ import {
 export function Header() {
   const [location] = useLocation();
   const [projectName, setProjectName] = useState(getSelectedProject().name);
+  const { user } = useAuth();
+
+  const userInitials = user
+    ? ((user.firstName?.[0] || "") + (user.lastName?.[0] || "")).toUpperCase() || (user.email?.[0] || "?").toUpperCase()
+    : "?";
+  const userDisplayName = user
+    ? [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "User"
+    : "User";
 
   const { data: projects = [] } = useQuery({
     queryKey: ["/api/projects"],
@@ -331,17 +340,21 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="h-8 w-8 bg-accent rounded-full flex items-center justify-center text-accent-foreground font-medium text-sm hover:opacity-90 transition-opacity"
+              className="h-8 w-8 bg-accent rounded-full flex items-center justify-center text-accent-foreground font-medium text-sm hover:opacity-90 transition-opacity overflow-hidden"
               data-testid="button-user"
               aria-label="User menu"
             >
-              JD
+              {user?.profileImageUrl ? (
+                <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                userInitials
+              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-2 py-2">
-              <div className="text-sm font-semibold" data-testid="text-user-name">JD</div>
-              <div className="text-xs text-muted-foreground" data-testid="text-user-email">jd@example.com</div>
+              <div className="text-sm font-semibold" data-testid="text-user-name">{userDisplayName}</div>
+              <div className="text-xs text-muted-foreground" data-testid="text-user-email">{user?.email || ""}</div>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem data-testid="menu-user-profile" onSelect={() => (window.location.href = "/account/profile")}>
@@ -350,8 +363,17 @@ export function Header() {
             </DropdownMenuItem>
             <DropdownMenuItem data-testid="menu-user-account" onSelect={() => (window.location.href = "/account")}>Account</DropdownMenuItem>
             <DropdownMenuItem data-testid="menu-user-security" onSelect={() => (window.location.href = "/account/security")}>Security</DropdownMenuItem>
+            {user?.isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem data-testid="menu-user-admin" onSelect={() => (window.location.href = "/admin")}>
+                  <Shield className="w-4 h-4 mr-2" />
+                  Admin Dashboard
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem data-testid="menu-user-signout" onSelect={() => window.alert("Signed out (mock)")}>
+            <DropdownMenuItem data-testid="menu-user-signout" onSelect={() => (window.location.href = "/api/logout")}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign out
             </DropdownMenuItem>

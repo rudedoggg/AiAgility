@@ -18,10 +18,11 @@ Over the next iterations, the main focus is to tighten the feedback loop between
 `;
 }
 
-export async function seedDemoData() {
+export async function seedDemoData(userId?: string) {
   const p1 = await storage.createProject({
     name: "Office Location Decision",
     summary: "",
+    userId: userId || null,
     executiveSummary: executiveSummaryFor("Office Location Decision"),
     dashboardStatus: {
       status: "Decision timeline is active. Define criteria, gather options, then converge.",
@@ -74,6 +75,7 @@ export async function seedDemoData() {
   const p2 = await storage.createProject({
     name: "Commute Impact Study",
     summary: "",
+    userId: userId || null,
     executiveSummary: executiveSummaryFor("Commute Impact Study"),
     dashboardStatus: {
       status: "Analysis project. Build a defensible model and communicate tradeoffs clearly.",
@@ -109,6 +111,7 @@ export async function seedDemoData() {
   const p3 = await storage.createProject({
     name: "Board Memo Draft",
     summary: "",
+    userId: userId || null,
     executiveSummary: executiveSummaryFor("Board Memo Draft"),
     dashboardStatus: {
       status: "Writing project. Convert inputs into a board-ready narrative and artifacts.",

@@ -11,11 +11,12 @@ import {
 } from "@shared/schema";
 
 export interface IStorage {
-  listProjects(): Promise<Project[]>;
+  listProjects(userId?: string): Promise<Project[]>;
   getProject(id: string): Promise<Project | undefined>;
   createProject(data: InsertProject): Promise<Project>;
   updateProject(id: string, data: Partial<InsertProject>): Promise<Project | undefined>;
   deleteProject(id: string): Promise<void>;
+  listAllProjects(): Promise<Project[]>;
 
   listGoalSections(projectId: string): Promise<GoalSection[]>;
   getGoalSection(id: string): Promise<GoalSection | undefined>;
@@ -45,10 +46,21 @@ export interface IStorage {
   listChatMessages(parentId: string, parentType: string): Promise<ChatMessage[]>;
   createChatMessage(data: InsertChatMessage): Promise<ChatMessage>;
   updateChatMessage(id: string, data: Partial<InsertChatMessage>): Promise<ChatMessage | undefined>;
+
+  getProjectIdForGoal(goalId: string): Promise<string | undefined>;
+  getProjectIdForLabBucket(bucketId: string): Promise<string | undefined>;
+  getProjectIdForDeliverable(deliverableId: string): Promise<string | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async listProjects(): Promise<Project[]> {
+  async listProjects(userId?: string): Promise<Project[]> {
+    if (userId) {
+      return db.select().from(projects).where(eq(projects.userId, userId)).orderBy(asc(projects.createdAt));
+    }
+    return db.select().from(projects).orderBy(asc(projects.createdAt));
+  }
+
+  async listAllProjects(): Promise<Project[]> {
     return db.select().from(projects).orderBy(asc(projects.createdAt));
   }
 
@@ -187,6 +199,21 @@ export class DatabaseStorage implements IStorage {
   async updateChatMessage(id: string, data: Partial<InsertChatMessage>): Promise<ChatMessage | undefined> {
     const [row] = await db.update(chatMessages).set(data).where(eq(chatMessages.id, id)).returning();
     return row;
+  }
+
+  async getProjectIdForGoal(goalId: string): Promise<string | undefined> {
+    const [row] = await db.select({ projectId: goalSections.projectId }).from(goalSections).where(eq(goalSections.id, goalId));
+    return row?.projectId;
+  }
+
+  async getProjectIdForLabBucket(bucketId: string): Promise<string | undefined> {
+    const [row] = await db.select({ projectId: labBuckets.projectId }).from(labBuckets).where(eq(labBuckets.id, bucketId));
+    return row?.projectId;
+  }
+
+  async getProjectIdForDeliverable(deliverableId: string): Promise<string | undefined> {
+    const [row] = await db.select({ projectId: deliverables.projectId }).from(deliverables).where(eq(deliverables.id, deliverableId));
+    return row?.projectId;
   }
 }
 
