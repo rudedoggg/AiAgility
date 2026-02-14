@@ -1,18 +1,95 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export const projects = pgTable("projects", {
+  id: varchar("id", { length: 64 }).primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  summary: text("summary").notNull().default(""),
+  executiveSummary: text("executive_summary").notNull().default(""),
+  dashboardStatus: jsonb("dashboard_status").$type<{
+    status: string;
+    done: string[];
+    undone: string[];
+    nextSteps: string[];
+  }>().notNull().default({ status: "", done: [], undone: [], nextSteps: [] }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const goalSections = pgTable("goal_sections", {
+  id: varchar("id", { length: 64 }).primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id", { length: 64 }).notNull().references(() => projects.id, { onDelete: "cascade" }),
+  genericName: text("generic_name").notNull(),
+  subtitle: text("subtitle").notNull().default(""),
+  completeness: integer("completeness").notNull().default(0),
+  totalItems: integer("total_items").notNull().default(0),
+  completedItems: integer("completed_items").notNull().default(0),
+  content: text("content").notNull().default(""),
+  sortOrder: integer("sort_order").notNull().default(0),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export const labBuckets = pgTable("lab_buckets", {
+  id: varchar("id", { length: 64 }).primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id", { length: 64 }).notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const deliverables = pgTable("deliverables", {
+  id: varchar("id", { length: 64 }).primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id", { length: 64 }).notNull().references(() => projects.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  subtitle: text("subtitle").notNull().default(""),
+  completeness: integer("completeness").notNull().default(0),
+  status: text("status").notNull().default("draft"),
+  content: text("content").notNull().default(""),
+  engaged: boolean("engaged").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const bucketItems = pgTable("bucket_items", {
+  id: varchar("id", { length: 64 }).primaryKey().default(sql`gen_random_uuid()`),
+  parentId: varchar("parent_id", { length: 64 }).notNull(),
+  parentType: text("parent_type").notNull(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  preview: text("preview").notNull().default(""),
+  date: text("date").notNull().default(""),
+  url: text("url"),
+  fileName: text("file_name"),
+  fileSizeLabel: text("file_size_label"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id", { length: 64 }).primaryKey().default(sql`gen_random_uuid()`),
+  parentId: varchar("parent_id", { length: 64 }).notNull(),
+  parentType: text("parent_type").notNull(),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  timestamp: text("timestamp").notNull(),
+  hasSaveableContent: boolean("has_saveable_content").notNull().default(false),
+  saved: boolean("saved").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true });
+export const insertGoalSectionSchema = createInsertSchema(goalSections).omit({ id: true });
+export const insertLabBucketSchema = createInsertSchema(labBuckets).omit({ id: true });
+export const insertDeliverableSchema = createInsertSchema(deliverables).omit({ id: true });
+export const insertBucketItemSchema = createInsertSchema(bucketItems).omit({ id: true });
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true });
+
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type Project = typeof projects.$inferSelect;
+export type InsertGoalSection = z.infer<typeof insertGoalSectionSchema>;
+export type GoalSection = typeof goalSections.$inferSelect;
+export type InsertLabBucket = z.infer<typeof insertLabBucketSchema>;
+export type LabBucket = typeof labBuckets.$inferSelect;
+export type InsertDeliverable = z.infer<typeof insertDeliverableSchema>;
+export type Deliverable = typeof deliverables.$inferSelect;
+export type InsertBucketItem = z.infer<typeof insertBucketItemSchema>;
+export type BucketItem = typeof bucketItems.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
