@@ -107,6 +107,18 @@ export function Header() {
     queryFn: () => api.projects.list(),
   });
 
+  useEffect(() => {
+    if (projects.length > 0) {
+      const current = getSelectedProject();
+      const exists = projects.some((p) => p.id === current.id);
+      if (!exists) {
+        const first = projects[0];
+        setSelectedProject({ id: first.id, name: first.name });
+        setProjectName(first.name);
+      }
+    }
+  }, [projects]);
+
   const createProjectMutation = useMutation({
     mutationFn: async ({ name, summary }: { name: string; summary: string }) => {
       const snippet = summary.trim();
