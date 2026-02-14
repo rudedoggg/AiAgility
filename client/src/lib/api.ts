@@ -1,0 +1,122 @@
+import { apiRequest } from "./queryClient";
+
+export type ApiProject = {
+  id: string;
+  name: string;
+  summary: string;
+  executiveSummary: string;
+  dashboardStatus: {
+    status: string;
+    done: string[];
+    undone: string[];
+    nextSteps: string[];
+  };
+  createdAt: string;
+};
+
+export type ApiGoalSection = {
+  id: string;
+  projectId: string;
+  genericName: string;
+  subtitle: string;
+  completeness: number;
+  totalItems: number;
+  completedItems: number;
+  content: string;
+  sortOrder: number;
+};
+
+export type ApiLabBucket = {
+  id: string;
+  projectId: string;
+  name: string;
+  sortOrder: number;
+};
+
+export type ApiDeliverable = {
+  id: string;
+  projectId: string;
+  title: string;
+  subtitle: string;
+  completeness: number;
+  status: string;
+  content: string;
+  engaged: boolean;
+  sortOrder: number;
+};
+
+export type ApiBucketItem = {
+  id: string;
+  parentId: string;
+  parentType: string;
+  type: string;
+  title: string;
+  preview: string;
+  date: string;
+  url: string | null;
+  fileName: string | null;
+  fileSizeLabel: string | null;
+  sortOrder: number;
+};
+
+export type ApiChatMessage = {
+  id: string;
+  parentId: string;
+  parentType: string;
+  role: string;
+  content: string;
+  timestamp: string;
+  hasSaveableContent: boolean;
+  saved: boolean;
+  sortOrder: number;
+};
+
+async function json<T>(res: Response): Promise<T> {
+  return res.json() as Promise<T>;
+}
+
+export const api = {
+  projects: {
+    list: () => fetch("/api/projects", { credentials: "include" }).then(r => r.json()) as Promise<ApiProject[]>,
+    get: (id: string) => fetch(`/api/projects/${id}`, { credentials: "include" }).then(r => r.json()) as Promise<ApiProject>,
+    create: (data: Partial<ApiProject>) => apiRequest("POST", "/api/projects", data).then(json<ApiProject>),
+    update: (id: string, data: Partial<ApiProject>) => apiRequest("PATCH", `/api/projects/${id}`, data).then(json<ApiProject>),
+    delete: (id: string) => apiRequest("DELETE", `/api/projects/${id}`),
+  },
+
+  goals: {
+    list: (projectId: string) => fetch(`/api/projects/${projectId}/goals`, { credentials: "include" }).then(r => r.json()) as Promise<ApiGoalSection[]>,
+    create: (projectId: string, data: Partial<ApiGoalSection>) => apiRequest("POST", `/api/projects/${projectId}/goals`, data).then(json<ApiGoalSection>),
+    update: (id: string, data: Partial<ApiGoalSection>) => apiRequest("PATCH", `/api/goals/${id}`, data).then(json<ApiGoalSection>),
+    delete: (id: string) => apiRequest("DELETE", `/api/goals/${id}`),
+    reorder: (projectId: string, ids: string[]) => apiRequest("PUT", `/api/projects/${projectId}/goals/reorder`, { ids }),
+  },
+
+  lab: {
+    list: (projectId: string) => fetch(`/api/projects/${projectId}/lab`, { credentials: "include" }).then(r => r.json()) as Promise<ApiLabBucket[]>,
+    create: (projectId: string, data: Partial<ApiLabBucket>) => apiRequest("POST", `/api/projects/${projectId}/lab`, data).then(json<ApiLabBucket>),
+    update: (id: string, data: Partial<ApiLabBucket>) => apiRequest("PATCH", `/api/lab/${id}`, data).then(json<ApiLabBucket>),
+    delete: (id: string) => apiRequest("DELETE", `/api/lab/${id}`),
+    reorder: (projectId: string, ids: string[]) => apiRequest("PUT", `/api/projects/${projectId}/lab/reorder`, { ids }),
+  },
+
+  deliverables: {
+    list: (projectId: string) => fetch(`/api/projects/${projectId}/deliverables`, { credentials: "include" }).then(r => r.json()) as Promise<ApiDeliverable[]>,
+    create: (projectId: string, data: Partial<ApiDeliverable>) => apiRequest("POST", `/api/projects/${projectId}/deliverables`, data).then(json<ApiDeliverable>),
+    update: (id: string, data: Partial<ApiDeliverable>) => apiRequest("PATCH", `/api/deliverables/${id}`, data).then(json<ApiDeliverable>),
+    delete: (id: string) => apiRequest("DELETE", `/api/deliverables/${id}`),
+    reorder: (projectId: string, ids: string[]) => apiRequest("PUT", `/api/projects/${projectId}/deliverables/reorder`, { ids }),
+  },
+
+  items: {
+    list: (parentType: string, parentId: string) => fetch(`/api/items/${parentType}/${parentId}`, { credentials: "include" }).then(r => r.json()) as Promise<ApiBucketItem[]>,
+    create: (data: Partial<ApiBucketItem>) => apiRequest("POST", "/api/items", data).then(json<ApiBucketItem>),
+    delete: (id: string) => apiRequest("DELETE", `/api/items/${id}`),
+  },
+
+  messages: {
+    list: (parentType: string, parentId: string) => fetch(`/api/messages/${parentType}/${parentId}`, { credentials: "include" }).then(r => r.json()) as Promise<ApiChatMessage[]>,
+    create: (data: Partial<ApiChatMessage>) => apiRequest("POST", "/api/messages", data).then(json<ApiChatMessage>),
+    update: (id: string, data: Partial<ApiChatMessage>) => apiRequest("PATCH", `/api/messages/${id}`, data).then(json<ApiChatMessage>),
+  },
+};
