@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api, type ApiLabBucket, type ApiBucketItem, type ApiChatMessage } from "@/lib/api";
 import {
   DndContext,
   DragEndEvent,
@@ -16,8 +18,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
-import { mockMessages } from "@/lib/mockData";
-import { getProjectTemplates } from "@/lib/projectTemplates";
 import { getSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 import { Message, Bucket } from "@/lib/types";
 import { FileText, Link as LinkIcon, MessageSquare, StickyNote, FolderOpen, Folder, Plus, ChevronRight, Upload, Link2, RefreshCw, Trash2 } from "lucide-react";
@@ -29,59 +29,102 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SummaryCard } from "@/components/shared/SummaryCard";
 import { ScopedHistory } from "@/components/shared/ScopedHistory";
 
+type BucketWithMessages = Bucket & { bucketMessages: Message[] };
+
 export default function LabPage() {
-  const { templates, baseMessages } = getProjectTemplates();
   const [activeProject, setActiveProject] = useState(getSelectedProject());
-
-  const template = templates[activeProject.id];
-  const generatedTemplate = useMemo(() => {
-    if (template) return null;
-    try {
-      const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${activeProject.id}`);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }, [activeProject.id, template]);
-
-  const [messages, setMessages] = useState<Message[]>(template ? baseMessages : mockMessages);
-  const [buckets, setBuckets] = useState<Bucket[]>(
-    template ? template.lab.buckets.map(b => ({ ...b, bucketMessages: (b as any).bucketMessages || [] })) : []
-  );
+  const [buckets, setBuckets] = useState<BucketWithMessages[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const bucketRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const { data: apiBuckets } = useQuery({
+    queryKey: ["/api/projects", activeProject.id, "lab"],
+    queryFn: () => api.lab.list(activeProject.id),
+    enabled: !!activeProject.id,
+  });
+
+  const { data: apiPageMessages } = useQuery({
+    queryKey: ["/api/messages", "lab_page", activeProject.id],
+    queryFn: () => api.messages.list("lab_page", activeProject.id),
+    enabled: !!activeProject.id,
+  });
+
+  useEffect(() => {
+    if (apiPageMessages) {
+      setMessages(apiPageMessages.map(m => ({
+        id: m.id,
+        role: m.role as 'user' | 'ai',
+        content: m.content,
+        timestamp: m.timestamp,
+        hasSaveableContent: m.hasSaveableContent,
+        saved: m.saved,
+      })));
+    }
+  }, [apiPageMessages]);
+
+  useEffect(() => {
+    if (!apiBuckets) return;
+
+    setBuckets(prev => {
+      const prevMap = new Map(prev.map(b => [b.id, b]));
+      return apiBuckets.map(ab => {
+        const existing = prevMap.get(ab.id);
+        return {
+          id: ab.id,
+          name: ab.name,
+          items: existing?.items || [],
+          isOpen: existing?.isOpen || false,
+          bucketMessages: existing?.bucketMessages || [],
+        };
+      });
+    });
+
+    apiBuckets.forEach(ab => {
+      api.items.list("lab", ab.id).then(items => {
+        setBuckets(prev => prev.map(b => {
+          if (b.id !== ab.id) return b;
+          return {
+            ...b,
+            items: items.map(i => ({
+              id: i.id,
+              type: i.type as any,
+              title: i.title,
+              preview: i.preview,
+              date: i.date,
+              url: i.url || undefined,
+              fileName: i.fileName || undefined,
+              fileSizeLabel: i.fileSizeLabel || undefined,
+            })),
+          };
+        }));
+      }).catch(() => {});
+
+      api.messages.list("lab_bucket", ab.id).then(msgs => {
+        setBuckets(prev => prev.map(b => {
+          if (b.id !== ab.id) return b;
+          return {
+            ...b,
+            bucketMessages: msgs.map(m => ({
+              id: m.id,
+              role: m.role as 'user' | 'ai',
+              content: m.content,
+              timestamp: m.timestamp,
+              hasSaveableContent: m.hasSaveableContent,
+              saved: m.saved,
+            })),
+          };
+        }));
+      }).catch(() => {});
+    });
+  }, [apiBuckets]);
 
   useEffect(() => {
     const unsub = subscribeToSelectedProject((p) => {
       setActiveProject(p);
-
-      const nextTemplate = templates[p.id];
-
-      if (nextTemplate) {
-        setMessages(baseMessages);
-        setBuckets(nextTemplate.lab.buckets.map(b => ({ ...b, bucketMessages: (b as any).bucketMessages || [] })));
-        return;
-      }
-
-      let generated: any = null;
-      try {
-        const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${p.id}`);
-        generated = raw ? JSON.parse(raw) : null;
-      } catch {
-        generated = null;
-      }
-
-      if (generated?.lab?.buckets) {
-        setMessages(baseMessages);
-        setBuckets(generated.lab.buckets.map((b: any) => ({ ...b, bucketMessages: b.bucketMessages || [] })));
-        return;
-      }
-
-      setMessages(mockMessages);
-      setBuckets([]);
     });
     return () => unsub();
-  }, [baseMessages, templates]);
+  }, []);
 
   const toggleBucket = (id: string) => {
       setBuckets(prev => prev.map(b => b.id === id ? { ...b, isOpen: !b.isOpen } : b));
@@ -89,10 +132,32 @@ export default function LabPage() {
 
   const addBucketItem = (bucketId: string, item: Bucket["items"][number]) => {
       setBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, items: [item, ...b.items] } : b));
+
+      api.items.create({
+        parentId: bucketId,
+        parentType: "lab",
+        type: item.type,
+        title: item.title,
+        preview: item.preview,
+        date: item.date,
+        url: (item as any).url || null,
+        fileName: (item as any).fileName || null,
+        fileSizeLabel: (item as any).fileSizeLabel || null,
+      }).then(created => {
+        setBuckets(prev => prev.map(b => {
+          if (b.id !== bucketId) return b;
+          return {
+            ...b,
+            items: b.items.map(i => i.id === item.id ? { ...i, id: created.id } : i),
+          };
+        }));
+      }).catch(() => {});
   };
 
   const deleteBucketItem = (bucketId: string, itemId: string) => {
       setBuckets(prev => prev.map(b => b.id === bucketId ? { ...b, items: b.items.filter(i => i.id !== itemId) } : b));
+
+      api.items.delete(itemId).catch(() => {});
   };
 
   const scrollToBucket = (id: string) => {
@@ -151,7 +216,11 @@ export default function LabPage() {
               const oldIndex = prev.findIndex((b) => b.id === active.id);
               const newIndex = prev.findIndex((b) => b.id === over.id);
               if (oldIndex === -1 || newIndex === -1) return prev;
-              return arrayMove(prev, oldIndex, newIndex);
+              const reordered = arrayMove(prev, oldIndex, newIndex);
+
+              api.lab.reorder(activeProject.id, reordered.map(b => b.id)).catch(() => {});
+
+              return reordered;
             });
           }}
         >
@@ -179,9 +248,13 @@ export default function LabPage() {
                   isOpen: true,
                   items: [],
                   bucketMessages: [],
-                } as any,
+                },
                 ...prev,
               ]);
+
+              api.lab.create(activeProject.id, { name }).then(created => {
+                setBuckets(prev => prev.map(b => b.id === id ? { ...b, id: created.id, name: created.name } : b));
+              }).catch(() => {});
 
               setTimeout(() => {
                 bucketRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -201,20 +274,38 @@ export default function LabPage() {
             <div className="flex flex-col h-full">
                  <SummaryCard 
                     title="Lab Status"
-                    status={template?.lab.summary.status || generatedTemplate?.lab?.summary?.status || "Seeded from the project summary. Next: capture evidence and open questions."}
-                    done={template?.lab.summary.done || generatedTemplate?.lab?.summary?.done || []}
-                    undone={template?.lab.summary.undone || generatedTemplate?.lab?.summary?.undone || ["Add first evidence bucket"]}
-                    nextSteps={template?.lab.summary.nextSteps || generatedTemplate?.lab?.summary?.nextSteps || ["Add sources", "Log assumptions"]}
+                    status="Seeded from the project summary. Next: capture evidence and open questions."
+                    done={[]}
+                    undone={["Add first evidence bucket"]}
+                    nextSteps={["Add sources", "Log assumptions"]}
                  />
                  <ChatWorkspace
                     messages={messages}
-                    onSendMessage={() => {}}
+                    onSendMessage={(content) => {
+                      const userMsg: Message = {
+                        id: Date.now().toString(),
+                        role: "user",
+                        content,
+                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                      };
+                      setMessages(prev => [...prev, userMsg]);
+
+                      api.messages.create({
+                        parentId: activeProject.id,
+                        parentType: "lab_page",
+                        role: "user",
+                        content,
+                        timestamp: userMsg.timestamp,
+                      }).catch(() => {});
+                    }}
                     saveDestinations={buckets.map((b) => ({ id: b.id, label: b.name }))}
                     onSaveContent={(messageId, destinationId) => {
                         const msg = messages.find((m) => m.id === messageId);
                         if (!msg) return;
 
                         setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
+
+                        api.messages.update(messageId, { saved: true }).catch(() => {});
 
                         const noteTitle = msg.content.split("\n")[0]?.slice(0, 80) || "Saved chat";
                         const noteBody = msg.content;
@@ -265,7 +356,7 @@ export default function LabPage() {
                                             className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                const title = window.prompt(`New note in “${bucket.name}”`, "Quick note");
+                                                const title = window.prompt(`New note in "${bucket.name}"`, "Quick note");
                                                 if (!title) return;
                                                 const content = window.prompt("Note text", "");
 
@@ -375,11 +466,11 @@ export default function LabPage() {
                                                 <div className="h-full flex flex-col">
                                                     <div className="flex-1 min-h-0">
                                                         <ChatWorkspace
-                                                            messages={((bucket as any).bucketMessages || []) as any}
+                                                            messages={(bucket.bucketMessages || []) as any}
                                                             onSendMessage={(content) => {
-                                                                const userMsg = {
+                                                                const userMsg: Message = {
                                                                     id: Date.now().toString(),
-                                                                    role: "user" as const,
+                                                                    role: "user",
                                                                     content,
                                                                     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                                                                 };
@@ -390,10 +481,10 @@ export default function LabPage() {
                                                                     ...((bucket.items || []).slice(0, 8).map((i) => `- [${i.type}] ${i.title}`)),
                                                                 ].filter(Boolean);
 
-                                                                const aiMsg = {
+                                                                const aiMsg: Message = {
                                                                     id: (Date.now() + 1).toString(),
-                                                                    role: "ai" as const,
-                                                                    content: `Got it. I’m only using this bucket’s context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}`,
+                                                                    role: "ai",
+                                                                    content: `Got it. I'm only using this bucket's context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}`,
                                                                     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                                                                 };
 
@@ -402,11 +493,27 @@ export default function LabPage() {
                                                                         b.id === bucket.id
                                                                             ? {
                                                                                   ...b,
-                                                                                  bucketMessages: [...(((b as any).bucketMessages || []) as any[]), userMsg, aiMsg],
+                                                                                  bucketMessages: [...(b.bucketMessages || []), userMsg, aiMsg],
                                                                               }
                                                                             : b
                                                                     )
                                                                 );
+
+                                                                api.messages.create({
+                                                                  parentId: bucket.id,
+                                                                  parentType: "lab_bucket",
+                                                                  role: "user",
+                                                                  content,
+                                                                  timestamp: userMsg.timestamp,
+                                                                }).catch(() => {});
+
+                                                                api.messages.create({
+                                                                  parentId: bucket.id,
+                                                                  parentType: "lab_bucket",
+                                                                  role: "ai",
+                                                                  content: aiMsg.content,
+                                                                  timestamp: aiMsg.timestamp,
+                                                                }).catch(() => {});
                                                             }}
                                                             className="h-full"
                                                         />

@@ -4,67 +4,18 @@ import { SummaryCard } from "@/components/shared/SummaryCard";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { getSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
-import { getProjectTemplates } from "@/lib/projectTemplates";
-
-function getProjectSummaryFromStorage(projectId: string) {
-  try {
-    const seeded = window.localStorage.getItem(`agilityai:generatedTemplate:${projectId}`);
-    if (seeded) {
-      const parsed = JSON.parse(seeded);
-      if (parsed && typeof parsed.executiveSummary === "string") return parsed.executiveSummary;
-    }
-
-    return window.localStorage.getItem(`agilityai:projectSummary:${projectId}`) || "";
-  } catch {
-    return "";
-  }
-}
-
-type Project = {
-  id: string;
-  name: string;
-  createdAtLabel: string;
-};
-
-function generateExecutiveSummary(projectName: string) {
-  return `# Executive Summary — ${projectName}
-
-## Standing Question
-Give me a two-page executive summary of this project.
-
-## Summary (Draft)
-This project is focused on making decision-making and project delivery more structured, transparent, and repeatable by combining goals, research buckets, and deliverables into a single workflow. The core experience is a split workspace that pairs navigation and AI assistance with clearly scoped, expandable buckets that collect attachments and conversation history.
-
-Over the current iteration, the interface has converged on a consistent bucket system across Goals, Lab, and Deliverables: each bucket has uniform actions (note/upload/link/update), an attachments panel, and an activity/history surface. The addition of bucket-scoped chat creates a second layer of AI support—one global conversation that understands the whole page, and one local conversation per bucket that stays constrained to that bucket’s attachments and thread. This supports a more disciplined operating model where context is explicit and boundaries are clear.
-
-Key strengths of the current approach include consistent UX patterns across sections, fast capture of artifacts (files/links/notes), and clear separation between global and scoped conversations. The primary risks are around long-term persistence, cross-project organization, and governance of what “progress” means. Today’s progress calculation is a placeholder heuristic and should later be replaced by an AI-driven assessment aligned to explicit criteria per bucket type.
-
-## Current Focus
-1. Stabilize and refine the Dashboard as a project-level control plane.
-2. Improve the save workflow so AI outputs can be routed to the correct bucket destination.
-3. Continue harmonizing layouts and interaction patterns to reduce cognitive load.
-
-## Recommended Next Steps
-- Define a project schema (even if still client-only) so Goals/Lab/Deliverables can be tied to a selected project.
-- Introduce a consistent “AI outputs” attachment type, with metadata such as source (global chat vs bucket chat) and timestamp.
-- Add light-weight filtering/search in attachments, and consider pinning high-priority items.
-`;
-}
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, type ApiProject } from "@/lib/api";
 
 export default function DashboardPage() {
-  const { templates } = getProjectTemplates();
+  const queryClient = useQueryClient();
 
-  const [projects, setProjects] = useState<Project[]>([
-    { id: "p-1", name: "Office Location Decision", createdAtLabel: "Created Feb 7" },
-    { id: "p-2", name: "Commute Impact Study", createdAtLabel: "Created Feb 9" },
-    { id: "p-3", name: "Board Memo Draft", createdAtLabel: "Created Feb 10" },
-  ]);
+  const { data: projects = [] } = useQuery<ApiProject[]>({
+    queryKey: ["/api/projects"],
+  });
 
   const initialSelected = getSelectedProject();
-  const [activeProjectId, setActiveProjectId] = useState<string>(() => {
-    const exists = projects.some((p) => p.id === initialSelected.id);
-    return exists ? initialSelected.id : (projects[0]?.id || "");
-  });
+  const [activeProjectId, setActiveProjectId] = useState<string>(initialSelected.id);
 
   useEffect(() => {
     const unsub = subscribeToSelectedProject((p) => {
@@ -73,51 +24,25 @@ export default function DashboardPage() {
     return () => unsub();
   }, []);
 
-  const activeProject = useMemo(() => projects.find((p) => p.id === activeProjectId) || projects[0], [projects, activeProjectId]);
-  const generatedTemplate = useMemo(() => {
-    try {
-      const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${activeProjectId}`);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }, [activeProjectId]);
+  const activeProject = useMemo(() => {
+    return projects.find((p) => p.id === activeProjectId) || projects[0];
+  }, [projects, activeProjectId]);
 
-  const [executiveSummary, setExecutiveSummary] = useState<string>(() => {
-    const initialTemplate = templates[initialSelected.id];
-    if (initialTemplate) return initialTemplate.executiveSummary;
+  const executiveSummary = activeProject?.executiveSummary || "";
+  const dashboardStatus = activeProject?.dashboardStatus;
 
-    return getProjectSummaryFromStorage(initialSelected.id);
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeProject) return;
+      const refreshed = (activeProject.executiveSummary || "")
+        .replace("(Draft)", "(Draft • refreshed)")
+        .replace("## Standing Question", `## Standing Question\n(Refreshed ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`);
+      await api.projects.update(activeProject.id, { executiveSummary: refreshed });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+    },
   });
-
-  useEffect(() => {
-    const t = templates[activeProjectId];
-    setExecutiveSummary(t ? t.executiveSummary : (generatedTemplate?.executiveSummary || getProjectSummaryFromStorage(activeProjectId)));
-  }, [activeProjectId, templates, generatedTemplate]);
-
-  const handleNewProject = () => {
-    const name = window.prompt("Project name", "New Project");
-    if (!name) return;
-
-    const p: Project = {
-      id: `p-${Date.now()}`,
-      name,
-      createdAtLabel: `Created ${new Date().toLocaleDateString([], { month: "short", day: "numeric" })}`,
-    };
-
-    setProjects((prev) => [p, ...prev]);
-    setActiveProjectId(p.id);
-    setExecutiveSummary("");
-  };
-
-  const handleRefreshSummary = () => {
-    const t = templates[activeProjectId];
-    const refreshed = (t?.executiveSummary || generatedTemplate?.executiveSummary || generateExecutiveSummary(activeProject?.name || "Project"))
-      .replace("(Draft)", "(Draft • refreshed)")
-      .replace("## Standing Question", `## Standing Question\n(Refreshed ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`);
-
-    setExecutiveSummary(refreshed);
-  };
 
   return (
     <div className="h-screen w-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
@@ -143,10 +68,10 @@ export default function DashboardPage() {
                 <div className="p-6 space-y-6">
                   <SummaryCard
                     title="Project Status"
-                    status={templates[activeProjectId]?.dashboardStatus.status || "Seeded from the project summary. Next: turn the narrative into Goals, Knowledge Buckets, and Deliverables."}
-                    done={templates[activeProjectId]?.dashboardStatus.done || ["Project seeded"]}
-                    undone={templates[activeProjectId]?.dashboardStatus.undone || ["Create goal sections", "Create knowledge buckets", "Create deliverables"]}
-                    nextSteps={templates[activeProjectId]?.dashboardStatus.nextSteps || ["Define objective", "List constraints", "Draft a v1 deliverable"]}
+                    status={dashboardStatus?.status || "No status available."}
+                    done={dashboardStatus?.done || []}
+                    undone={dashboardStatus?.undone || []}
+                    nextSteps={dashboardStatus?.nextSteps || []}
                   />
 
                   <div className="rounded-xl border bg-card/40 overflow-hidden">
@@ -159,9 +84,10 @@ export default function DashboardPage() {
                         variant="ghost"
                         size="sm"
                         className="gap-2"
-                        onClick={handleRefreshSummary}
+                        onClick={() => refreshMutation.mutate()}
+                        disabled={refreshMutation.isPending || !activeProject}
                       >
-                        <RefreshCw className="w-4 h-4" />
+                        <RefreshCw className={`w-4 h-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
                         Refresh
                       </Button>
                     </div>

@@ -1,60 +1,30 @@
 import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getSelectedProject, setSelectedProject } from "@/lib/projectStore";
-
-type Project = { id: string; name: string };
-
-function loadProjects(): Project[] {
-  try {
-    const raw = window.localStorage.getItem("agilityai:projects");
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (Array.isArray(parsed)) {
-      return parsed
-        .filter((p) => p && typeof p.id === "string" && typeof p.name === "string")
-        .map((p) => ({ id: p.id, name: p.name }));
-    }
-  } catch {
-    // ignore
-  }
-
-  return [
-    { id: "p-1", name: "Office Location Decision" },
-    { id: "p-2", name: "Commute Impact Study" },
-    { id: "p-3", name: "Board Memo Draft" },
-  ];
-}
-
-function saveProjects(projects: Project[]) {
-  try {
-    window.localStorage.setItem("agilityai:projects", JSON.stringify(projects));
-  } catch {
-    // ignore
-  }
-}
-
-function deleteProjectArtifacts(projectId: string) {
-  try {
-    window.localStorage.removeItem(`agilityai:projectSummary:${projectId}`);
-  } catch {
-    // ignore
-  }
-  try {
-    window.localStorage.removeItem(`agilityai:generatedTemplate:${projectId}`);
-  } catch {
-    // ignore
-  }
-}
+import { api, type ApiProject } from "@/lib/api";
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>(() => loadProjects());
-  const [query, setQuery] = useState("");
+  const queryClient = useQueryClient();
 
+  const { data: projects = [] } = useQuery<ApiProject[]>({
+    queryKey: ["/api/projects"],
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.projects.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+    },
+  });
+
+  const [query, setQuery] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<Project | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ApiProject | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -64,7 +34,7 @@ export default function ProjectsPage() {
 
   const active = getSelectedProject();
 
-  const requestDelete = (p: Project) => {
+  const requestDelete = (p: ApiProject) => {
     setPendingDelete(p);
     setConfirmOpen(true);
   };
@@ -76,17 +46,14 @@ export default function ProjectsPage() {
     setConfirmOpen(false);
     setPendingDelete(null);
 
-    setProjects((prev) => {
-      const next = prev.filter((p) => p.id !== toDelete.id);
-      saveProjects(next);
-      deleteProjectArtifacts(toDelete.id);
-
-      if (active?.id === toDelete.id) {
-        const fallback = next[0] || { id: "p-1", name: "Office Location Decision" };
-        setSelectedProject(fallback);
-      }
-
-      return next;
+    deleteMutation.mutate(toDelete.id, {
+      onSuccess: () => {
+        if (active?.id === toDelete.id) {
+          const remaining = projects.filter((p) => p.id !== toDelete.id);
+          const fallback = remaining[0] || { id: "p-1", name: "Office Location Decision" };
+          setSelectedProject(fallback);
+        }
+      },
     });
   };
 
@@ -105,7 +72,7 @@ export default function ProjectsPage() {
                 Projects
               </div>
               <div className="text-sm text-muted-foreground mt-1" data-testid="text-projects-subtitle">
-                Manage the projects stored in this prototype (local-only).
+                Manage your projects.
               </div>
             </div>
           </div>

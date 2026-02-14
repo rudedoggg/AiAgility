@@ -3,6 +3,9 @@ import { Link, useLocation } from "wouter";
 import { ChevronDown, FolderPlus, LogOut, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getSelectedProject, setSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 
 function generateTemplateFromSnippet(projectName: string, snippet: string) {
   const cleaned = snippet.replace(/\s+/g, " ").trim();
@@ -12,109 +15,81 @@ function generateTemplateFromSnippet(projectName: string, snippet: string) {
 
   return {
     executiveSummary: `# Executive Summary — ${projectName}\n\n## Summary (Seed)\n${snippet}\n\n## Standing Question\nGive me a two-page executive summary of this project.\n`,
-    goals: {
-      summary: {
-        status: `Seeded from the project summary. Next: turn the narrative into explicit goals + constraints.` ,
-        done: ["Project seeded"],
-        undone: ["Define objective", "List constraints"],
-        nextSteps: ["Create 3 goal sections", "Add stakeholders"],
-      },
-      sections: [
-        {
-          id: "context",
-          genericName: "Context",
-          subtitle: "What’s happening and why now",
-          completeness: 35,
-          totalItems: 3,
-          completedItems: 1,
-          content: cleaned,
-          items: [{ id: `seed-${Date.now()}`, type: "note", title: "Seed summary", preview: snippet, date: makeDate() }],
-          isOpen: true,
-        },
-        {
-          id: "objective",
-          genericName: "Objective",
-          subtitle: "What outcome are we driving",
-          completeness: 10,
-          totalItems: 3,
-          completedItems: 0,
-          content: focus ? `Draft objective: ${focus}` : "Draft objective (TBD)",
-          items: [],
-          isOpen: false,
-        },
-        {
-          id: "stakeholders",
-          genericName: "Stakeholders",
-          subtitle: "Who must agree / who is impacted",
-          completeness: 0,
-          totalItems: 3,
-          completedItems: 0,
-          content: "(TBD)",
-          items: [],
-          isOpen: false,
-        },
-        {
-          id: "constraints",
-          genericName: "Constraints",
-          subtitle: "Budget, timing, non-negotiables",
-          completeness: 0,
-          totalItems: 3,
-          completedItems: 0,
-          content: "(TBD)",
-          items: [],
-          isOpen: false,
-        },
-      ],
+    dashboardStatus: {
+      status: `Seeded from the project summary. Next: turn the narrative into explicit goals + constraints.`,
+      done: ["Project seeded"],
+      undone: ["Define objective", "List constraints"],
+      nextSteps: ["Create 3 goal sections", "Add stakeholders"],
     },
-    lab: {
-      summary: {
-        status: `Create buckets that capture the evidence needed to support: “${focus || "the decision"}”.`,
-        done: [],
-        undone: ["Add first evidence bucket"],
-        nextSteps: ["Add sources", "Log assumptions"],
+    goals: [
+      {
+        genericName: "Context",
+        subtitle: "What's happening and why now",
+        completeness: 35,
+        totalItems: 3,
+        completedItems: 1,
+        content: cleaned,
+        sortOrder: 0,
+        items: [{ type: "note", title: "Seed summary", preview: snippet, date: makeDate() }],
       },
-      buckets: [
-        {
-          id: "research",
-          name: "Sources + Evidence",
-          isOpen: true,
-          items: [{ id: `seed-src-${Date.now()}`, type: "note", title: "What we know so far", preview: snippet, date: makeDate() }],
-          bucketMessages: [],
-        },
-        {
-          id: "interviews",
-          name: "Open Questions",
-          isOpen: false,
-          items: [{ id: `seed-q-${Date.now() + 1}`, type: "note", title: "Questions to answer", preview: "(TBD)", date: makeDate() }],
-          bucketMessages: [],
-        },
-      ],
-    },
-    deliverables: {
-      summary: {
-        status: "Draft deliverables now, then backfill evidence and tighten the narrative.",
-        done: [],
-        undone: ["Create deliverable outline"],
-        nextSteps: ["Draft v1", "Attach memory items"],
+      {
+        genericName: "Objective",
+        subtitle: "What outcome are we driving",
+        completeness: 10,
+        totalItems: 3,
+        completedItems: 0,
+        content: focus ? `Draft objective: ${focus}` : "Draft objective (TBD)",
+        sortOrder: 1,
+        items: [],
       },
-      deliverables: [
-        {
-          id: "1",
-          title: "Decision / Plan Draft",
-          subtitle: "Seeded from summary",
-          completeness: 15,
-          status: "draft",
-          lastEdited: "Just now",
-          engaged: true,
-          items: [{ id: `seed-deliv-${Date.now()}`, type: "note", title: "Seed summary", preview: snippet, date: makeDate() }],
-          content: `# ${projectName}\n\n## Seed Summary\n${snippet}\n\n## Draft\n(TBD)\n`,
-          bucketMessages: [],
-          isOpen: true,
-        },
-      ],
-    },
+      {
+        genericName: "Stakeholders",
+        subtitle: "Who must agree / who is impacted",
+        completeness: 0,
+        totalItems: 3,
+        completedItems: 0,
+        content: "(TBD)",
+        sortOrder: 2,
+        items: [],
+      },
+      {
+        genericName: "Constraints",
+        subtitle: "Budget, timing, non-negotiables",
+        completeness: 0,
+        totalItems: 3,
+        completedItems: 0,
+        content: "(TBD)",
+        sortOrder: 3,
+        items: [],
+      },
+    ],
+    lab: [
+      {
+        name: "Sources + Evidence",
+        sortOrder: 0,
+        items: [{ type: "note", title: "What we know so far", preview: snippet, date: makeDate() }],
+      },
+      {
+        name: "Open Questions",
+        sortOrder: 1,
+        items: [{ type: "note", title: "Questions to answer", preview: "(TBD)", date: makeDate() }],
+      },
+    ],
+    deliverables: [
+      {
+        title: "Decision / Plan Draft",
+        subtitle: "Seeded from summary",
+        completeness: 15,
+        status: "draft",
+        content: `# ${projectName}\n\n## Seed Summary\n${snippet}\n\n## Draft\n(TBD)\n`,
+        engaged: true,
+        sortOrder: 0,
+        items: [{ type: "note", title: "Seed summary", preview: snippet, date: makeDate() }],
+      },
+    ],
   };
 }
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,38 +102,91 @@ export function Header() {
   const [location] = useLocation();
   const [projectName, setProjectName] = useState(getSelectedProject().name);
 
-  const [projects, setProjects] = useState<{ id: string; name: string }[]>(() => {
-    try {
-      const raw = window.localStorage.getItem("agilityai:projects");
-      const parsed = raw ? JSON.parse(raw) : null;
-      if (Array.isArray(parsed)) {
-        const cleaned = parsed
-          .filter((p) => p && typeof p.id === "string" && typeof p.name === "string")
-          .map((p) => ({ id: p.id, name: p.name }));
-        if (cleaned.length) return cleaned;
-      }
-    } catch {
-      // ignore
-    }
+  const { data: projects = [] } = useQuery({
+    queryKey: ["/api/projects"],
+    queryFn: () => api.projects.list(),
+  });
 
-    return [
-      { id: "p-1", name: "Office Location Decision" },
-      { id: "p-2", name: "Commute Impact Study" },
-      { id: "p-3", name: "Board Memo Draft" },
-    ];
+  const createProjectMutation = useMutation({
+    mutationFn: async ({ name, summary }: { name: string; summary: string }) => {
+      const snippet = summary.trim();
+      const template = snippet ? generateTemplateFromSnippet(name, snippet) : null;
+
+      const project = await api.projects.create({
+        name,
+        summary,
+        executiveSummary: template?.executiveSummary || "",
+        dashboardStatus: template?.dashboardStatus || {
+          status: "New project created.",
+          done: [],
+          undone: [],
+          nextSteps: [],
+        },
+      });
+
+      if (template) {
+        for (const goal of template.goals) {
+          const { items, ...goalData } = goal;
+          const createdGoal = await api.goals.create(project.id, goalData);
+          for (const item of items) {
+            await api.items.create({
+              parentId: createdGoal.id,
+              parentType: "goal",
+              ...item,
+            });
+          }
+        }
+
+        for (const bucket of template.lab) {
+          const { items, ...bucketData } = bucket;
+          const createdBucket = await api.lab.create(project.id, bucketData);
+          for (const item of items) {
+            await api.items.create({
+              parentId: createdBucket.id,
+              parentType: "lab",
+              ...item,
+            });
+          }
+        }
+
+        for (const deliverable of template.deliverables) {
+          const { items, ...delivData } = deliverable;
+          const createdDeliv = await api.deliverables.create(project.id, delivData);
+          for (const item of items) {
+            await api.items.create({
+              parentId: createdDeliv.id,
+              parentType: "deliverable",
+              ...item,
+            });
+          }
+        }
+
+        const pageTypes = ["dashboard", "goals", "lab", "deliverables"];
+        for (const pageType of pageTypes) {
+          await api.messages.create({
+            parentId: project.id,
+            parentType: pageType,
+            role: "assistant",
+            content: `Welcome to ${name}! I'm ready to help you with your ${pageType}. Ask me anything.`,
+            timestamp: new Date().toISOString(),
+            hasSaveableContent: false,
+            saved: false,
+            sortOrder: 0,
+          });
+        }
+      }
+
+      return project;
+    },
+    onSuccess: (project) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      setSelectedProject({ id: project.id, name: project.name });
+    },
   });
 
   useEffect(() => {
     return subscribeToSelectedProject((p) => setProjectName(p.name));
   }, []);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem("agilityai:projects", JSON.stringify(projects));
-    } catch {
-      // ignore
-    }
-  }, [projects]);
 
   const navItems = [
     { label: "Dashboard", path: "/dashboard" },
@@ -221,26 +249,7 @@ export function Header() {
                 const summary = window.prompt("Project summary (one paragraph)", "");
                 if (summary === null) return;
 
-                const id = `p-${Date.now()}`;
-                const next = { id, name };
-
-                setProjects((prev) => [next, ...prev]);
-                setSelectedProject(next);
-
-                try {
-                  window.localStorage.setItem(`agilityai:projectSummary:${id}`, summary);
-                } catch {
-                  // ignore
-                }
-
-                try {
-                  const snippet = summary.trim();
-                  if (snippet) {
-                    window.localStorage.setItem(`agilityai:generatedTemplate:${id}`, JSON.stringify(generateTemplateFromSnippet(name, snippet)));
-                  }
-                } catch {
-                  // ignore
-                }
+                createProjectMutation.mutate({ name, summary });
               }}
             >
               <FolderPlus className="w-4 h-4 mr-2" />

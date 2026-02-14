@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -14,10 +14,10 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, type ApiGoalSection, type ApiBucketItem, type ApiChatMessage } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
-import { mockMessages } from "@/lib/mockData";
-import { getProjectTemplates } from "@/lib/projectTemplates";
 import { getSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 import { Message, Section } from "@/lib/types";
 import { ChevronRight, Target, Flag, Users, AlertTriangle, Circle, ChevronDown, StickyNote, Upload, Link2, RefreshCw, Trash2, FileText as FileTextIcon } from "lucide-react";
@@ -43,98 +43,213 @@ function getSectionIcon(id: string) {
     }
 }
 
+type LocalSection = Section & { bucketMessages?: Message[] };
+
 export default function GoalsPage() {
-  const { templates, baseMessages } = getProjectTemplates();
+  const queryClient = useQueryClient();
   const [activeProject, setActiveProject] = useState(getSelectedProject());
 
-  const template = templates[activeProject.id];
-  const generatedTemplate = useMemo(() => {
-    if (template) return null;
-    try {
-      const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${activeProject.id}`);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }, [activeProject.id, template]);
+  const { data: goalSections } = useQuery({
+    queryKey: ["/api/projects", activeProject.id, "goals"],
+    queryFn: () => api.goals.list(activeProject.id),
+    enabled: !!activeProject.id,
+  });
 
-  const [messages, setMessages] = useState<Message[]>(template ? baseMessages : mockMessages);
-  const [sections, setSections] = useState<Section[]>(
-    template ? template.goals.sections.map(s => ({ ...s, items: s.items || [], bucketMessages: (s as any).bucketMessages || [] })) : []
-  );
+  const { data: pageMessages } = useQuery({
+    queryKey: ["/api/messages", "goal_page", activeProject.id],
+    queryFn: () => api.messages.list("goal_page", activeProject.id),
+    enabled: !!activeProject.id,
+  });
+
+  const { data: projectData } = useQuery({
+    queryKey: ["/api/projects", activeProject.id],
+    queryFn: () => api.projects.get(activeProject.id),
+    enabled: !!activeProject.id,
+  });
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [sections, setSections] = useState<LocalSection[]>([]);
+  const [sectionItems, setSectionItems] = useState<Record<string, ApiBucketItem[]>>({});
+  const [bucketMessages, setBucketMessages] = useState<Record<string, Message[]>>({});
   const sectionRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
+    if (pageMessages) {
+      setMessages(pageMessages.map(m => ({
+        id: m.id,
+        role: m.role as 'user' | 'ai',
+        content: m.content,
+        timestamp: m.timestamp,
+        hasSaveableContent: m.hasSaveableContent,
+        saved: m.saved,
+      })));
+    }
+  }, [pageMessages]);
+
+  useEffect(() => {
+    if (goalSections) {
+      setSections(prev => {
+        const openState: Record<string, boolean> = {};
+        prev.forEach(s => { openState[s.id] = !!s.isOpen; });
+
+        return goalSections.map(gs => ({
+          id: gs.id,
+          genericName: gs.genericName,
+          subtitle: gs.subtitle,
+          completeness: gs.completeness,
+          totalItems: gs.totalItems,
+          completedItems: gs.completedItems,
+          content: gs.content,
+          items: (sectionItems[gs.id] || []).map(i => ({
+            id: i.id,
+            type: i.type as 'doc' | 'link' | 'chat' | 'note' | 'file',
+            title: i.title,
+            preview: i.preview,
+            date: i.date,
+            url: i.url || undefined,
+            fileName: i.fileName || undefined,
+            fileSizeLabel: i.fileSizeLabel || undefined,
+          })),
+          isOpen: openState[gs.id] || false,
+          bucketMessages: bucketMessages[gs.id] || [],
+        }));
+      });
+    }
+  }, [goalSections, sectionItems, bucketMessages]);
+
+  useEffect(() => {
     const unsub = subscribeToSelectedProject((p) => {
       setActiveProject(p);
-
-      const nextTemplate = templates[p.id];
-
-      if (nextTemplate) {
-        setMessages(baseMessages);
-        setSections(nextTemplate.goals.sections.map(s => ({ ...s, items: s.items || [], bucketMessages: (s as any).bucketMessages || [] })));
-        return;
-      }
-
-      let generated: any = null;
-      try {
-        const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${p.id}`);
-        generated = raw ? JSON.parse(raw) : null;
-      } catch {
-        generated = null;
-      }
-
-      if (generated?.goals?.sections) {
-        setMessages(baseMessages);
-        setSections(generated.goals.sections.map((s: any) => ({ ...s, items: s.items || [], bucketMessages: s.bucketMessages || [] })));
-        return;
-      }
-
-      setMessages(mockMessages);
-      setSections([]);
+      setSectionItems({});
+      setBucketMessages({});
     });
     return () => unsub();
-  }, [baseMessages, templates]);
+  }, []);
 
-  const handleSendMessage = (content: string) => {
+  const fetchSectionItems = useCallback(async (sectionId: string) => {
+    if (sectionItems[sectionId]) return;
+    try {
+      const items = await api.items.list("goal", sectionId);
+      setSectionItems(prev => ({ ...prev, [sectionId]: items }));
+    } catch {
+    }
+  }, [sectionItems]);
+
+  const fetchBucketMessages = useCallback(async (sectionId: string) => {
+    if (bucketMessages[sectionId]) return;
+    try {
+      const msgs = await api.messages.list("goal_bucket", sectionId);
+      setBucketMessages(prev => ({
+        ...prev,
+        [sectionId]: msgs.map(m => ({
+          id: m.id,
+          role: m.role as 'user' | 'ai',
+          content: m.content,
+          timestamp: m.timestamp,
+          hasSaveableContent: m.hasSaveableContent,
+          saved: m.saved,
+        })),
+      }));
+    } catch {
+    }
+  }, [bucketMessages]);
+
+  const handleSendMessage = async (content: string) => {
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const newMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
       content,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp,
     };
     
     setMessages(prev => [...prev, newMessage]);
 
+    api.messages.create({
+      parentId: activeProject.id,
+      parentType: "goal_page",
+      role: "user",
+      content,
+      timestamp,
+      hasSaveableContent: false,
+      saved: false,
+    }).catch(() => {});
+
     setTimeout(() => {
+        const aiTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const aiMessage: Message = {
             id: (Date.now() + 1).toString(),
             role: 'ai',
             content: "I've updated the section with those details.",
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: aiTimestamp,
             hasSaveableContent: true
         };
         setMessages(prev => [...prev, aiMessage]);
+
+        api.messages.create({
+          parentId: activeProject.id,
+          parentType: "goal_page",
+          role: "ai",
+          content: aiMessage.content,
+          timestamp: aiTimestamp,
+          hasSaveableContent: true,
+          saved: false,
+        }).catch(() => {});
     }, 1000);
   };
 
   const toggleSection = (id: string) => {
-      setSections(prev => prev.map(s => s.id === id ? { ...s, isOpen: !s.isOpen } : s));
+      setSections(prev => prev.map(s => {
+        if (s.id === id) {
+          const willOpen = !s.isOpen;
+          if (willOpen) {
+            fetchSectionItems(id);
+            fetchBucketMessages(id);
+          }
+          return { ...s, isOpen: willOpen };
+        }
+        return s;
+      }));
   };
 
   const addSectionItem = (sectionId: string, item: NonNullable<Section["items"]>[number]) => {
-      setSections(prev => prev.map(s => s.id === sectionId ? { ...s, items: [item, ...(s.items || [])] } : s));
+      setSectionItems(prev => ({
+        ...prev,
+        [sectionId]: [{ ...item, parentId: sectionId, parentType: "goal", url: (item as any).url || null, fileName: (item as any).fileName || null, fileSizeLabel: (item as any).fileSizeLabel || null, sortOrder: 0 } as ApiBucketItem, ...(prev[sectionId] || [])],
+      }));
+
+      api.items.create({
+        parentId: sectionId,
+        parentType: "goal",
+        type: item.type,
+        title: item.title,
+        preview: item.preview,
+        date: item.date,
+        url: (item as any).url || null,
+        fileName: (item as any).fileName || null,
+        fileSizeLabel: (item as any).fileSizeLabel || null,
+      }).catch(() => {});
   };
 
   const deleteSectionItem = (sectionId: string, itemId: string) => {
-      setSections(prev => prev.map(s => s.id === sectionId ? { ...s, items: (s.items || []).filter(i => i.id !== itemId) } : s));
+      setSectionItems(prev => ({
+        ...prev,
+        [sectionId]: (prev[sectionId] || []).filter(i => i.id !== itemId),
+      }));
+
+      api.items.delete(itemId).catch(() => {});
   };
 
   const scrollToSection = (id: string) => {
-      // First ensure it's open
-      setSections(prev => prev.map(s => s.id === id ? { ...s, isOpen: true } : s));
-      // Then scroll
+      setSections(prev => prev.map(s => {
+        if (s.id === id && !s.isOpen) {
+          fetchSectionItems(id);
+          fetchBucketMessages(id);
+          return { ...s, isOpen: true };
+        }
+        return s;
+      }));
       setTimeout(() => {
           sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 50);
@@ -175,23 +290,70 @@ export default function GoalsPage() {
     );
   }
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    if (active.id === over.id) return;
+
+    setSections((prev) => {
+      const oldIndex = prev.findIndex((s) => s.id === active.id);
+      const newIndex = prev.findIndex((s) => s.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const reordered = arrayMove(prev, oldIndex, newIndex);
+
+      api.goals.reorder(activeProject.id, reordered.map(s => s.id)).catch(() => {});
+
+      return reordered;
+    });
+  };
+
+  const handleAddSection = () => {
+    const name = window.prompt("New goal section", "New section");
+    if (!name) return;
+
+    const tempId = `section-${Date.now()}`;
+    const newSection: LocalSection = {
+      id: tempId,
+      genericName: name,
+      subtitle: "(draft)",
+      completeness: 0,
+      totalItems: 0,
+      completedItems: 0,
+      content: "",
+      items: [],
+      isOpen: true,
+      bucketMessages: [],
+    };
+
+    setSections((prev) => [newSection, ...prev]);
+
+    api.goals.create(activeProject.id, {
+      genericName: name,
+      subtitle: "(draft)",
+      completeness: 0,
+      totalItems: 0,
+      completedItems: 0,
+      content: "",
+    }).then((created) => {
+      setSections(prev => prev.map(s => s.id === tempId ? { ...s, id: created.id } : s));
+    }).catch(() => {});
+
+    setTimeout(() => {
+      sectionRefs.current[tempId]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
+  const summaryStatus = projectData?.dashboardStatus?.status || "Seeded from the project summary. Next: make the goals explicit.";
+  const summaryDone = projectData?.dashboardStatus?.done || ["Project seeded"];
+  const summaryUndone = projectData?.dashboardStatus?.undone || ["Define objective", "List constraints"];
+  const summaryNextSteps = projectData?.dashboardStatus?.nextSteps || ["Create goal sections", "Add stakeholders"];
+
   const SidebarContent = (
       <div className="space-y-0">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          onDragEnd={(event: DragEndEvent) => {
-            const { active, over } = event;
-            if (!over) return;
-            if (active.id === over.id) return;
-
-            setSections((prev) => {
-              const oldIndex = prev.findIndex((s) => s.id === active.id);
-              const newIndex = prev.findIndex((s) => s.id === over.id);
-              if (oldIndex === -1 || newIndex === -1) return prev;
-              return arrayMove(prev, oldIndex, newIndex);
-            });
-          }}
+          onDragEnd={handleDragEnd}
         >
           <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
             {sectionIds.map((id) => (
@@ -205,35 +367,14 @@ export default function GoalsPage() {
             variant="ghost"
             size="sm"
             className="w-full justify-start px-3 mt-2 text-xs text-muted-foreground hover:text-primary"
-            onClick={() => {
-              const name = window.prompt("New goal section", "New section");
-              if (!name) return;
-
-              const id = `section-${Date.now()}`;
-              setSections((prev) => [
-                {
-                  id,
-                  genericName: name,
-                  subtitle: "(draft)",
-                  completeness: 0,
-                  totalItems: 0,
-                  completedItems: 0,
-                  content: "",
-                  items: [],
-                  isOpen: true,
-                },
-                ...prev,
-              ]);
-
-              setTimeout(() => {
-                sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }, 50);
-            }}
+            onClick={handleAddSection}
           >
             + Add Goal Section
           </Button>
       </div>
   );
+
+  const getSectionItemsList = (sectionId: string) => sectionItems[sectionId] || [];
 
   return (
     <AppShell 
@@ -243,10 +384,10 @@ export default function GoalsPage() {
             <div className="flex flex-col h-full">
                 <SummaryCard 
                     title="Goals Status"
-                    status={template?.goals.summary.status || generatedTemplate?.goals?.summary?.status || "Seeded from the project summary. Next: make the goals explicit."}
-                    done={template?.goals.summary.done || generatedTemplate?.goals?.summary?.done || ["Project seeded"]}
-                    undone={template?.goals.summary.undone || generatedTemplate?.goals?.summary?.undone || ["Define objective", "List constraints"]}
-                    nextSteps={template?.goals.summary.nextSteps || generatedTemplate?.goals?.summary?.nextSteps || ["Create goal sections", "Add stakeholders"]}
+                    status={summaryStatus}
+                    done={summaryDone}
+                    undone={summaryUndone}
+                    nextSteps={summaryNextSteps}
                 />
                 <ChatWorkspace 
                     messages={messages} 
@@ -278,7 +419,9 @@ export default function GoalsPage() {
         <div className="bg-background h-full">
             <ScrollArea className="h-full">
                 <div className="flex flex-col divide-y divide-border/60">
-                    {sections.map(section => (
+                    {sections.map(section => {
+                        const items = getSectionItemsList(section.id);
+                        return (
                         <div key={section.id} ref={el => { if (el) sectionRefs.current[section.id] = el; }} className="bg-background">
                             <div 
                                 className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-muted/5 transition-colors group"
@@ -301,7 +444,7 @@ export default function GoalsPage() {
                                                     explicitPercent: section.completeness,
                                                     completedItems: section.completedItems,
                                                     totalItems: section.totalItems,
-                                                    itemsCount: (section.items || []).length,
+                                                    itemsCount: items.length,
                                                 })}%`,
                                             }}
                                         />
@@ -313,7 +456,7 @@ export default function GoalsPage() {
                                             className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                const title = window.prompt(`New note in “${section.genericName}”`, "Quick note");
+                                                const title = window.prompt(`New note in "${section.genericName}"`, "Quick note");
                                                 if (!title) return;
                                                 const content = window.prompt("Note text", "");
 
@@ -420,39 +563,55 @@ export default function GoalsPage() {
                                                 <div className="h-full flex flex-col">
                                                     <div className="flex-1 min-h-0">
                                                         <ChatWorkspace
-                                                            messages={((section as any).bucketMessages || []) as any}
+                                                            messages={(bucketMessages[section.id] || []) as any}
                                                             onSendMessage={(content) => {
-                                                                const userMsg = {
+                                                                const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                                                                const userMsg: Message = {
                                                                     id: Date.now().toString(),
-                                                                    role: "user" as const,
+                                                                    role: "user",
                                                                     content,
-                                                                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                                                                    timestamp,
                                                                 };
 
                                                                 const contextLines = [
                                                                     `Goal Section: ${section.genericName}`,
                                                                     section.subtitle ? `Subtitle: ${section.subtitle}` : null,
                                                                     "Attachments:",
-                                                                    ...((section.items || []).slice(0, 8).map((i) => `- [${i.type}] ${i.title}`)),
+                                                                    ...(items.slice(0, 8).map((i) => `- [${i.type}] ${i.title}`)),
                                                                 ].filter(Boolean);
 
-                                                                const aiMsg = {
+                                                                const aiTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                                                                const aiMsg: Message = {
                                                                     id: (Date.now() + 1).toString(),
-                                                                    role: "ai" as const,
-                                                                    content: `Got it. I’m only using this section’s context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}`,
-                                                                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                                                                    role: "ai",
+                                                                    content: `Got it. I'm only using this section's context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}`,
+                                                                    timestamp: aiTimestamp,
                                                                 };
 
-                                                                setSections((prev) =>
-                                                                    prev.map((s) =>
-                                                                        s.id === section.id
-                                                                            ? {
-                                                                                  ...s,
-                                                                                  bucketMessages: [...(((s as any).bucketMessages || []) as any[]), userMsg, aiMsg],
-                                                                              }
-                                                                            : s
-                                                                    )
-                                                                );
+                                                                setBucketMessages(prev => ({
+                                                                    ...prev,
+                                                                    [section.id]: [...(prev[section.id] || []), userMsg, aiMsg],
+                                                                }));
+
+                                                                api.messages.create({
+                                                                  parentId: section.id,
+                                                                  parentType: "goal_bucket",
+                                                                  role: "user",
+                                                                  content,
+                                                                  timestamp,
+                                                                  hasSaveableContent: false,
+                                                                  saved: false,
+                                                                }).catch(() => {});
+
+                                                                api.messages.create({
+                                                                  parentId: section.id,
+                                                                  parentType: "goal_bucket",
+                                                                  role: "ai",
+                                                                  content: aiMsg.content,
+                                                                  timestamp: aiTimestamp,
+                                                                  hasSaveableContent: false,
+                                                                  saved: false,
+                                                                }).catch(() => {});
                                                             }}
                                                             className="h-full"
                                                         />
@@ -465,11 +624,11 @@ export default function GoalsPage() {
                                                 <div className="h-full flex flex-col">
                                                     <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-attachments-title-${section.id}`}>Memory</div>
                                                     <div className="flex-1 overflow-y-auto">
-                                                        {(section.items || []).length === 0 ? (
+                                                        {items.length === 0 ? (
                                                             <div className="px-4 py-3 text-sm text-muted-foreground" data-testid={`text-attachments-empty-${section.id}`}>No files, links, or notes yet.</div>
                                                         ) : (
                                                             <div className="divide-y">
-                                                                {(section.items || []).map((item) => (
+                                                                {items.map((item) => (
                                                                     <div key={item.id} className="group flex items-start gap-3 px-4 py-3">
                                                                         <div className="mt-0.5 text-muted-foreground group-hover:text-primary transition-colors">
                                                                             {(item.type === 'file' || item.type === 'doc') && <FileTextIcon className="w-4 h-4" />}
@@ -515,7 +674,8 @@ export default function GoalsPage() {
                                 )}
                             </AnimatePresence>
                         </div>
-                    ))}
+                        );
+                    })}
                     
                     <div className="p-8 text-center">
                         <Button variant="outline" className="text-muted-foreground border-dashed">

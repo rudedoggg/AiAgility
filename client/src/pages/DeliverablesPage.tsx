@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -14,10 +14,10 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, type ApiDeliverable, type ApiBucketItem, type ApiChatMessage } from "@/lib/api";
 import { AppShell } from "@/components/layout/AppShell";
 import { ChatWorkspace } from "@/components/shared/ChatWorkspace";
-import { mockMessages } from "@/lib/mockData";
-import { getProjectTemplates } from "@/lib/projectTemplates";
 import { getSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 import { Message, Deliverable } from "@/lib/types";
 import { FileText, Download, Share2, CheckSquare, Edit3, ChevronRight, StickyNote, Upload, Link2, RefreshCw, Trash2, FileText as FileTextIcon } from "lucide-react";
@@ -30,76 +30,215 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SummaryCard } from "@/components/shared/SummaryCard";
 import { ScopedHistory } from "@/components/shared/ScopedHistory";
 
+type LocalDeliverable = Deliverable & { isOpen?: boolean; bucketMessages?: Message[] };
+
 export default function DeliverablesPage() {
-  const { templates, baseMessages } = getProjectTemplates();
+  const queryClient = useQueryClient();
   const [activeProject, setActiveProject] = useState(getSelectedProject());
 
-  const template = templates[activeProject.id];
-  const generatedTemplate = useMemo(() => {
-    if (template) return null;
-    try {
-      const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${activeProject.id}`);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }, [activeProject.id, template]);
+  const { data: apiDeliverables } = useQuery({
+    queryKey: ["/api/projects", activeProject.id, "deliverables"],
+    queryFn: () => api.deliverables.list(activeProject.id),
+    enabled: !!activeProject.id,
+  });
 
-  const [messages, setMessages] = useState<Message[]>(template ? baseMessages : mockMessages);
-  const [deliverables, setDeliverables] = useState<Deliverable[]>(
-    template ? template.deliverables.deliverables.map(d => ({...d, isOpen: true, items: (d as any).items || [], bucketMessages: (d as any).bucketMessages || [], completeness: (d as any).completeness ?? 50, subtitle: (d as any).subtitle || ''})) : []
-  ); // Default open for demo
+  const { data: pageMessages } = useQuery({
+    queryKey: ["/api/messages", "deliverable_page", activeProject.id],
+    queryFn: () => api.messages.list("deliverable_page", activeProject.id),
+    enabled: !!activeProject.id,
+  });
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [deliverables, setDeliverables] = useState<LocalDeliverable[]>([]);
+  const [deliverableItems, setDeliverableItems] = useState<Record<string, ApiBucketItem[]>>({});
+  const [bucketMessages, setBucketMessages] = useState<Record<string, Message[]>>({});
   const deliverableRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
+    if (pageMessages) {
+      setMessages(pageMessages.map(m => ({
+        id: m.id,
+        role: m.role as 'user' | 'ai',
+        content: m.content,
+        timestamp: m.timestamp,
+        hasSaveableContent: m.hasSaveableContent,
+        saved: m.saved,
+      })));
+    }
+  }, [pageMessages]);
+
+  useEffect(() => {
+    if (apiDeliverables) {
+      setDeliverables(prev => {
+        const openState: Record<string, boolean> = {};
+        prev.forEach(d => { openState[d.id] = !!d.isOpen; });
+
+        return apiDeliverables.map(ad => ({
+          id: ad.id,
+          title: ad.title,
+          subtitle: ad.subtitle,
+          completeness: ad.completeness,
+          status: ad.status as 'draft' | 'review' | 'final',
+          lastEdited: "Recently",
+          content: ad.content,
+          engaged: ad.engaged,
+          items: (deliverableItems[ad.id] || []).map(i => ({
+            id: i.id,
+            type: i.type as 'doc' | 'link' | 'chat' | 'note' | 'file',
+            title: i.title,
+            preview: i.preview,
+            date: i.date,
+            url: i.url || undefined,
+            fileName: i.fileName || undefined,
+            fileSizeLabel: i.fileSizeLabel || undefined,
+          })),
+          isOpen: openState[ad.id] ?? true,
+          bucketMessages: bucketMessages[ad.id] || [],
+        }));
+      });
+    }
+  }, [apiDeliverables, deliverableItems, bucketMessages]);
+
+  useEffect(() => {
     const unsub = subscribeToSelectedProject((p) => {
       setActiveProject(p);
-
-      const nextTemplate = templates[p.id];
-
-      if (nextTemplate) {
-        setMessages(baseMessages);
-        setDeliverables(nextTemplate.deliverables.deliverables.map(d => ({...d, isOpen: true, items: (d as any).items || [], bucketMessages: (d as any).bucketMessages || [], completeness: (d as any).completeness ?? 50, subtitle: (d as any).subtitle || ''})));
-        return;
-      }
-
-      let generated: any = null;
-      try {
-        const raw = window.localStorage.getItem(`agilityai:generatedTemplate:${p.id}`);
-        generated = raw ? JSON.parse(raw) : null;
-      } catch {
-        generated = null;
-      }
-
-      if (generated?.deliverables?.deliverables) {
-        setMessages(baseMessages);
-        setDeliverables(generated.deliverables.deliverables.map((d: any) => ({...d, isOpen: true, items: d.items || [], bucketMessages: d.bucketMessages || [], completeness: d.completeness ?? 50, subtitle: d.subtitle || ''})));
-        return;
-      }
-
-      setMessages(mockMessages);
-      setDeliverables([]);
+      setDeliverableItems({});
+      setBucketMessages({});
     });
     return () => unsub();
-  }, [baseMessages, templates]);
+  }, []);
+
+  const fetchDeliverableItems = useCallback(async (deliverableId: string) => {
+    if (deliverableItems[deliverableId]) return;
+    try {
+      const items = await api.items.list("deliverable", deliverableId);
+      setDeliverableItems(prev => ({ ...prev, [deliverableId]: items }));
+    } catch {
+    }
+  }, [deliverableItems]);
+
+  const fetchBucketMessages = useCallback(async (deliverableId: string) => {
+    if (bucketMessages[deliverableId]) return;
+    try {
+      const msgs = await api.messages.list("deliverable_bucket", deliverableId);
+      setBucketMessages(prev => ({
+        ...prev,
+        [deliverableId]: msgs.map(m => ({
+          id: m.id,
+          role: m.role as 'user' | 'ai',
+          content: m.content,
+          timestamp: m.timestamp,
+          hasSaveableContent: m.hasSaveableContent,
+          saved: m.saved,
+        })),
+      }));
+    } catch {
+    }
+  }, [bucketMessages]);
 
   const toggleDeliverable = (id: string) => {
     setDeliverables(prev => prev.map(d => 
-        d.id === id ? { ...d, isOpen: !(d as any).isOpen } : d
+        d.id === id ? { ...d, isOpen: !d.isOpen } : d
     ));
+    const doc = deliverables.find(d => d.id === id);
+    if (doc && !doc.isOpen) {
+      fetchDeliverableItems(id);
+      fetchBucketMessages(id);
+    }
   };
 
   const addDeliverableItem = (deliverableId: string, item: NonNullable<Deliverable["items"]>[number]) => {
-      setDeliverables(prev => prev.map(d => d.id === deliverableId ? { ...d, items: [item, ...((d as any).items || [])] } : d));
+    setDeliverableItems(prev => ({
+      ...prev,
+      [deliverableId]: [
+        {
+          id: item.id,
+          parentId: deliverableId,
+          parentType: "deliverable",
+          type: item.type,
+          title: item.title,
+          preview: item.preview,
+          date: item.date,
+          url: (item as any).url || null,
+          fileName: (item as any).fileName || null,
+          fileSizeLabel: (item as any).fileSizeLabel || null,
+          sortOrder: 0,
+        },
+        ...(prev[deliverableId] || []),
+      ],
+    }));
+
+    api.items.create({
+      parentId: deliverableId,
+      parentType: "deliverable",
+      type: item.type,
+      title: item.title,
+      preview: item.preview,
+      date: item.date,
+      url: (item as any).url || null,
+      fileName: (item as any).fileName || null,
+      fileSizeLabel: (item as any).fileSizeLabel || null,
+    }).catch(() => {});
   };
 
   const deleteDeliverableItem = (deliverableId: string, itemId: string) => {
-      setDeliverables(prev => prev.map(d => d.id === deliverableId ? { ...d, items: (((d as any).items || []) as any[]).filter(i => i.id !== itemId) } : d));
+    setDeliverableItems(prev => ({
+      ...prev,
+      [deliverableId]: (prev[deliverableId] || []).filter(i => i.id !== itemId),
+    }));
+
+    api.items.delete(itemId).catch(() => {});
+  };
+
+  const handleSendMessage = async (content: string) => {
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content,
+      timestamp,
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+
+    api.messages.create({
+      parentId: activeProject.id,
+      parentType: "deliverable_page",
+      role: "user",
+      content,
+      timestamp,
+      hasSaveableContent: false,
+      saved: false,
+    }).catch(() => {});
+
+    setTimeout(() => {
+      const aiTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'ai',
+        content: "I've updated the deliverable with those details.",
+        timestamp: aiTimestamp,
+        hasSaveableContent: true,
+      };
+      setMessages(prev => [...prev, aiMessage]);
+
+      api.messages.create({
+        parentId: activeProject.id,
+        parentType: "deliverable_page",
+        role: "ai",
+        content: aiMessage.content,
+        timestamp: aiTimestamp,
+        hasSaveableContent: true,
+        saved: false,
+      }).catch(() => {});
+    }, 1000);
   };
 
   const scrollToDeliverable = (id: string) => {
       setDeliverables(prev => prev.map(d => d.id === id ? { ...d, isOpen: true } : d));
+      fetchDeliverableItems(id);
+      fetchBucketMessages(id);
       setTimeout(() => {
           deliverableRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 50);
@@ -158,7 +297,9 @@ export default function DeliverablesPage() {
               const oldIndex = prev.findIndex((d) => d.id === active.id);
               const newIndex = prev.findIndex((d) => d.id === over.id);
               if (oldIndex === -1 || newIndex === -1) return prev;
-              return arrayMove(prev, oldIndex, newIndex);
+              const reordered = arrayMove(prev, oldIndex, newIndex);
+              api.deliverables.reorder(activeProject.id, reordered.map(d => d.id)).catch(() => {});
+              return reordered;
             });
           }}
         >
@@ -178,26 +319,36 @@ export default function DeliverablesPage() {
               const name = window.prompt("New deliverable", "New deliverable");
               if (!name) return;
 
-              const id = `deliv-${Date.now()}`;
-              setDeliverables((prev) => [
-                {
-                  id,
-                  title: name,
-                  subtitle: "(draft)",
-                  completeness: 0,
-                  status: "draft",
-                  lastEdited: "Just now",
-                  content: "# " + name + "\n\n(TBD)",
-                  items: [],
-                  engaged: false,
-                  isOpen: true,
-                  bucketMessages: [],
-                } as any,
-                ...prev,
-              ]);
+              const tempId = `deliv-${Date.now()}`;
+              const newDeliverable: LocalDeliverable = {
+                id: tempId,
+                title: name,
+                subtitle: "(draft)",
+                completeness: 0,
+                status: "draft",
+                lastEdited: "Just now",
+                content: "# " + name + "\n\n(TBD)",
+                items: [],
+                engaged: false,
+                isOpen: true,
+                bucketMessages: [],
+              };
+
+              setDeliverables((prev) => [newDeliverable, ...prev]);
+
+              api.deliverables.create(activeProject.id, {
+                title: name,
+                subtitle: "(draft)",
+                completeness: 0,
+                status: "draft",
+                content: "# " + name + "\n\n(TBD)",
+                engaged: false,
+              }).then((created) => {
+                setDeliverables(prev => prev.map(d => d.id === tempId ? { ...d, id: created.id } : d));
+              }).catch(() => {});
 
               setTimeout(() => {
-                deliverableRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+                deliverableRefs.current[tempId]?.scrollIntoView({ behavior: "smooth", block: "start" });
               }, 50);
             }}
           >
@@ -214,20 +365,22 @@ export default function DeliverablesPage() {
             <div className="flex flex-col h-full">
                  <SummaryCard 
                     title="Deliverables Status"
-                    status={template?.deliverables.summary.status || generatedTemplate?.deliverables?.summary?.status || "Seeded from the project summary. Next: draft the first deliverable."}
-                    done={template?.deliverables.summary.done || generatedTemplate?.deliverables?.summary?.done || []}
-                    undone={template?.deliverables.summary.undone || generatedTemplate?.deliverables?.summary?.undone || ["Create deliverable outline"]}
-                    nextSteps={template?.deliverables.summary.nextSteps || generatedTemplate?.deliverables?.summary?.nextSteps || ["Draft v1", "Attach memory items"]}
+                    status="Seeded from the project summary. Next: draft the first deliverable."
+                    done={[]}
+                    undone={["Create deliverable outline"]}
+                    nextSteps={["Draft v1", "Attach memory items"]}
                 />
                  <ChatWorkspace
                     messages={messages}
-                    onSendMessage={() => {}}
+                    onSendMessage={handleSendMessage}
                     saveDestinations={deliverables.map((d) => ({ id: d.id, label: d.title }))}
                     onSaveContent={(messageId, destinationId) => {
                         const msg = messages.find((m) => m.id === messageId);
                         if (!msg) return;
 
                         setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
+
+                        api.messages.update(messageId, { saved: true }).catch(() => {});
 
                         const now = new Date();
                         const label = now.toLocaleDateString([], { month: "short", day: "numeric" });
@@ -256,15 +409,15 @@ export default function DeliverablesPage() {
                                 className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-muted/5 transition-colors group bg-background sticky top-0 z-10"
                                 onClick={() => toggleDeliverable(doc.id)}
                             >
-                                <div className={cn("text-muted-foreground transition-transform duration-200 mr-2", (doc as any).isOpen ? "rotate-90" : "")}>
+                                <div className={cn("text-muted-foreground transition-transform duration-200 mr-2", doc.isOpen ? "rotate-90" : "")}>
                                     <ChevronRight className="w-4 h-4" />
                                 </div>
                                 <div className="flex items-center gap-3 flex-1 min-w-0">
                                     <FileText className="w-4 h-4 text-primary shrink-0" />
                                     <div className="min-w-0">
                                         <h2 className="text-sm font-bold font-heading text-foreground truncate" data-testid={`text-bucket-title-${doc.id}`}>{doc.title}</h2>
-                                        {(doc as any).subtitle ? (
-                                            <div className="text-xs text-muted-foreground truncate" data-testid={`text-bucket-subtitle-${doc.id}`}>{(doc as any).subtitle}</div>
+                                        {doc.subtitle ? (
+                                            <div className="text-xs text-muted-foreground truncate" data-testid={`text-bucket-subtitle-${doc.id}`}>{doc.subtitle}</div>
                                         ) : null}
                                     </div>
                                 </div>
@@ -274,8 +427,8 @@ export default function DeliverablesPage() {
                                             className="h-full bg-primary/80"
                                             style={{
                                                 width: `${getBucketProgressPercent({
-                                                    explicitPercent: (doc as any).completeness,
-                                                    itemsCount: (((doc as any).items || []) as any[]).length,
+                                                    explicitPercent: doc.completeness,
+                                                    itemsCount: ((doc.items || []) as any[]).length,
                                                 })}%`,
                                             }}
                                         />
@@ -287,7 +440,7 @@ export default function DeliverablesPage() {
                                             className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                const title = window.prompt(`New note in “${doc.title}”`, "Quick note");
+                                                const title = window.prompt(`New note in "${doc.title}"`, "Quick note");
                                                 if (!title) return;
                                                 const content = window.prompt("Note text", "");
 
@@ -383,7 +536,7 @@ export default function DeliverablesPage() {
                             </div>
 
                             <AnimatePresence initial={false}>
-                                {((doc as any).isOpen) && (
+                                {(doc.isOpen) && (
                                     <motion.div
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: "auto", opacity: 1 }}
@@ -396,7 +549,7 @@ export default function DeliverablesPage() {
                                                 <div className="h-full flex flex-col">
                                                     <div className="flex-1 min-h-0">
                                                         <ChatWorkspace
-                                                            messages={(((doc as any).bucketMessages || []) as any)}
+                                                            messages={((doc.bucketMessages || []) as any)}
                                                             onSendMessage={(content) => {
                                                                 const userMsg = {
                                                                     id: Date.now().toString(),
@@ -405,12 +558,12 @@ export default function DeliverablesPage() {
                                                                     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                                                                 };
 
-                                                                const versions = ((((doc as any).items || []) as any[]).filter((i: any) => i.type === 'doc' || i.type === 'link'));
+                                                                const versions = (((doc.items || []) as any[]).filter((i: any) => i.type === 'doc' || i.type === 'link'));
                                                                 const current = versions[0];
 
                                                                 const contextLines = [
                                                                     `Deliverable: ${doc.title}`,
-                                                                    (doc as any).subtitle ? `Subtitle: ${(doc as any).subtitle}` : null,
+                                                                    doc.subtitle ? `Subtitle: ${doc.subtitle}` : null,
                                                                     `Status: ${doc.status}`,
                                                                     current ? `Current version: ${current.title}` : "Current version: (none yet)",
                                                                     "Deliverable versions:",
@@ -421,20 +574,34 @@ export default function DeliverablesPage() {
                                                                 const aiMsg = {
                                                                     id: (Date.now() + 1).toString(),
                                                                     role: "ai" as const,
-                                                                    content: `I’ll help edit this deliverable. I’m only using this deliverable’s versions + context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}\n\nIf you want, reply with “save as new version” and I’ll format the update to paste into a new version.`,
+                                                                    content: `I'll help edit this deliverable. I'm only using this deliverable's versions + context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}\n\nIf you want, reply with "save as new version" and I'll format the update to paste into a new version.`,
                                                                     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                                                                 };
 
-                                                                setDeliverables((prev) =>
-                                                                    prev.map((d) =>
-                                                                        d.id === doc.id
-                                                                            ? {
-                                                                                  ...d,
-                                                                                  bucketMessages: [...((((d as any).bucketMessages || []) as any[])), userMsg, aiMsg],
-                                                                              }
-                                                                            : d
-                                                                    )
-                                                                );
+                                                                setBucketMessages(prev => ({
+                                                                    ...prev,
+                                                                    [doc.id]: [...(prev[doc.id] || []), userMsg, aiMsg],
+                                                                }));
+
+                                                                api.messages.create({
+                                                                    parentId: doc.id,
+                                                                    parentType: "deliverable_bucket",
+                                                                    role: "user",
+                                                                    content,
+                                                                    timestamp: userMsg.timestamp,
+                                                                    hasSaveableContent: false,
+                                                                    saved: false,
+                                                                }).catch(() => {});
+
+                                                                api.messages.create({
+                                                                    parentId: doc.id,
+                                                                    parentType: "deliverable_bucket",
+                                                                    role: "ai",
+                                                                    content: aiMsg.content,
+                                                                    timestamp: aiMsg.timestamp,
+                                                                    hasSaveableContent: false,
+                                                                    saved: false,
+                                                                }).catch(() => {});
                                                             }}
                                                             className="h-full"
                                                         />
@@ -447,11 +614,11 @@ export default function DeliverablesPage() {
                                                 <div className="h-full flex flex-col">
                                                     <div className="px-4 py-3 border-b border-border/50 text-[11px] uppercase tracking-wider text-muted-foreground" data-testid={`text-deliverable-title-${doc.id}`}>Deliverable</div>
                                                     <div className="flex-1 overflow-y-auto">
-                                                        {(((doc as any).items || []) as any[]).length === 0 ? (
+                                                        {((doc.items || []) as any[]).length === 0 ? (
                                                             <div className="px-4 py-3 text-sm text-muted-foreground" data-testid={`text-deliverable-empty-${doc.id}`}>No versions yet. Use chat to draft and save the first version.</div>
                                                         ) : (
                                                             <div className="divide-y">
-                                                                {(((doc as any).items || []) as any[])
+                                                                {((doc.items || []) as any[])
                                                                     .filter((i: any) => i.type === 'doc' || i.type === 'link')
                                                                     .map((item: any, idx: number) => (
                                                                     <div key={item.id} className="group flex items-start gap-3 px-4 py-3">
@@ -463,7 +630,7 @@ export default function DeliverablesPage() {
                                                                             <div className="flex items-center justify-between gap-3">
                                                                                 <div className="min-w-0">
                                                                                     <div className="text-sm font-medium text-foreground truncate" data-testid={`text-deliverable-version-name-${item.id}`}>{item.title}</div>
-                                                                                    <div className="text-[10px] text-muted-foreground" data-testid={`text-deliverable-version-meta-${item.id}`}>Version {(((doc as any).items || []) as any[]).filter((v: any) => v.type === 'doc' || v.type === 'link').length - idx} • {item.date}</div>
+                                                                                    <div className="text-[10px] text-muted-foreground" data-testid={`text-deliverable-version-meta-${item.id}`}>Version {((doc.items || []) as any[]).filter((v: any) => v.type === 'doc' || v.type === 'link').length - idx} • {item.date}</div>
                                                                                 </div>
                                                                                 <div className="flex items-center gap-2 shrink-0">
                                                                                     <button
