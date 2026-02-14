@@ -33,8 +33,12 @@ export const getQueryFn: <T>(options: {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      setTimeout(() => handleAuthError(), 0);
+      throw new Error("Unauthorized");
     }
 
     await throwIfResNotOk(res);
@@ -55,3 +59,8 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+export function handleAuthError() {
+  queryClient.setQueryData(["/api/auth/user"], null);
+  queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+}
