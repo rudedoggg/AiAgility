@@ -11,7 +11,7 @@ interface AppShellProps {
 
 export function AppShell({ children, navContent, navTitle, topRightContent }: AppShellProps) {
   return (
-    <div className="h-screen w-screen bg-muted/30 text-foreground font-sans flex flex-col overflow-hidden">
+    <div className="h-screen w-screen bg-muted/60 text-foreground font-sans flex flex-col overflow-hidden">
       <Header />
       <div className="flex-1 pt-[60px] h-full overflow-hidden w-full">
          <ResizablePanelGroup direction="vertical" className="h-full w-full p-2 gap-2">
