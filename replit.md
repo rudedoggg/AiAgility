@@ -45,7 +45,15 @@ A decision-making and project management tool with four main sections: Dashboard
 - `client/src/pages/LandingPage.tsx` — Public landing page for unauthenticated users
 - `client/src/pages/AdminPage.tsx` — Admin dashboard (users, projects, stats)
 
-## Recent Changes (Feb 14, 2026)
+## Recent Changes (Feb 17, 2026)
+- Added CoreQs admin page (/admin/coreqs) for managing AI context queries
+- `core_queries` table stores context queries per AI interaction location (6 locations)
+- Location keys: goal_page, goal_bucket, lab_page, lab_bucket, deliverable_page, deliverable_bucket
+- Admin can set context queries that get prepended to user messages at each AI interaction point
+- API: GET /api/core-queries (all users), GET/PUT /api/admin/core-queries (admin only)
+- CoreQs menu item added to admin section of Header user dropdown
+
+## Previous Changes (Feb 14, 2026)
 - Added Replit Auth integration (OIDC) with user authentication
 - Added admin role system (first user auto-promoted to admin)
 - Added userId to projects table for per-user project isolation

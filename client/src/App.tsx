@@ -18,6 +18,7 @@ import AccountPage from "@/pages/AccountPage";
 import SecurityPage from "@/pages/SecurityPage";
 import LandingPage from "@/pages/LandingPage";
 import AdminPage from "@/pages/AdminPage";
+import CoreQsPage from "@/pages/CoreQsPage";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -40,6 +41,7 @@ function AuthenticatedRouter() {
       <Route path="/account/security" component={SecurityPage} />
 
       <Route path="/admin" component={AdminPage} />
+      <Route path="/admin/coreqs" component={CoreQsPage} />
 
       <Route component={NotFound} />
     </Switch>

@@ -77,6 +77,13 @@ export const chatMessages = pgTable("chat_messages", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
+export const coreQueries = pgTable("core_queries", {
+  id: varchar("id", { length: 64 }).primaryKey().default(sql`gen_random_uuid()`),
+  locationKey: text("location_key").notNull().unique(),
+  contextQuery: text("context_query").notNull().default(""),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true });
 export const insertGoalSectionSchema = createInsertSchema(goalSections).omit({ id: true });
 export const insertLabBucketSchema = createInsertSchema(labBuckets).omit({ id: true });
@@ -96,3 +103,7 @@ export type InsertBucketItem = z.infer<typeof insertBucketItemSchema>;
 export type BucketItem = typeof bucketItems.$inferSelect;
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+
+export const insertCoreQuerySchema = createInsertSchema(coreQueries).omit({ id: true, updatedAt: true });
+export type InsertCoreQuery = z.infer<typeof insertCoreQuerySchema>;
+export type CoreQuery = typeof coreQueries.$inferSelect;

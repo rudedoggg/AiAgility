@@ -119,4 +119,17 @@ export const api = {
     create: (data: Partial<ApiChatMessage>) => apiRequest("POST", "/api/messages", data).then(json<ApiChatMessage>),
     update: (id: string, data: Partial<ApiChatMessage>) => apiRequest("PATCH", `/api/messages/${id}`, data).then(json<ApiChatMessage>),
   },
+
+  coreQueries: {
+    list: () => fetch("/api/core-queries", { credentials: "include" }).then(r => r.json()) as Promise<ApiCoreQuery[]>,
+    listAdmin: () => fetch("/api/admin/core-queries", { credentials: "include" }).then(r => r.json()) as Promise<ApiCoreQuery[]>,
+    update: (locationKey: string, contextQuery: string) => apiRequest("PUT", `/api/admin/core-queries/${locationKey}`, { contextQuery }).then(json<ApiCoreQuery>),
+  },
+};
+
+export type ApiCoreQuery = {
+  id: string;
+  locationKey: string;
+  contextQuery: string;
+  updatedAt: string;
 };

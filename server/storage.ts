@@ -1,13 +1,14 @@
 import { eq, asc, and } from "drizzle-orm";
 import { db } from "./db";
 import {
-  projects, goalSections, labBuckets, deliverables, bucketItems, chatMessages,
+  projects, goalSections, labBuckets, deliverables, bucketItems, chatMessages, coreQueries,
   type InsertProject, type Project,
   type InsertGoalSection, type GoalSection,
   type InsertLabBucket, type LabBucket,
   type InsertDeliverable, type Deliverable,
   type InsertBucketItem, type BucketItem,
   type InsertChatMessage, type ChatMessage,
+  type CoreQuery,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -50,6 +51,10 @@ export interface IStorage {
   getProjectIdForGoal(goalId: string): Promise<string | undefined>;
   getProjectIdForLabBucket(bucketId: string): Promise<string | undefined>;
   getProjectIdForDeliverable(deliverableId: string): Promise<string | undefined>;
+
+  listCoreQueries(): Promise<CoreQuery[]>;
+  getCoreQuery(locationKey: string): Promise<CoreQuery | undefined>;
+  upsertCoreQuery(locationKey: string, contextQuery: string): Promise<CoreQuery>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -214,6 +219,30 @@ export class DatabaseStorage implements IStorage {
   async getProjectIdForDeliverable(deliverableId: string): Promise<string | undefined> {
     const [row] = await db.select({ projectId: deliverables.projectId }).from(deliverables).where(eq(deliverables.id, deliverableId));
     return row?.projectId;
+  }
+
+  async listCoreQueries(): Promise<CoreQuery[]> {
+    return db.select().from(coreQueries).orderBy(asc(coreQueries.locationKey));
+  }
+
+  async getCoreQuery(locationKey: string): Promise<CoreQuery | undefined> {
+    const [row] = await db.select().from(coreQueries).where(eq(coreQueries.locationKey, locationKey));
+    return row;
+  }
+
+  async upsertCoreQuery(locationKey: string, contextQuery: string): Promise<CoreQuery> {
+    const existing = await this.getCoreQuery(locationKey);
+    if (existing) {
+      const [row] = await db.update(coreQueries)
+        .set({ contextQuery, updatedAt: new Date() })
+        .where(eq(coreQueries.locationKey, locationKey))
+        .returning();
+      return row;
+    }
+    const [row] = await db.insert(coreQueries)
+      .values({ locationKey, contextQuery })
+      .returning();
+    return row;
   }
 }
 

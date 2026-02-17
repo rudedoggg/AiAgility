@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ChevronDown, FolderPlus, LogOut, Settings, User, Shield } from "lucide-react";
+import { ChevronDown, FolderPlus, LogOut, Settings, User, Shield, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getSelectedProject, setSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -369,6 +369,10 @@ export function Header() {
                 <DropdownMenuItem data-testid="menu-user-admin" onSelect={() => (window.location.href = "/admin")}>
                   <Shield className="w-4 h-4 mr-2" />
                   Admin Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem data-testid="menu-user-coreqs" onSelect={() => (window.location.href = "/admin/coreqs")}>
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  CoreQs
                 </DropdownMenuItem>
               </>
             )}

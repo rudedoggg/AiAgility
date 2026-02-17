@@ -259,5 +259,24 @@ export async function registerRoutes(
     res.json({ message: "User deactivated", userId: targetId });
   });
 
+  // === CORE QUERIES (admin write, all users read) ===
+  app.get("/api/core-queries", isAuthenticated, async (_req, res) => {
+    const rows = await storage.listCoreQueries();
+    res.json(rows);
+  });
+
+  app.get("/api/admin/core-queries", isAuthenticated, isAdmin, async (_req, res) => {
+    const rows = await storage.listCoreQueries();
+    res.json(rows);
+  });
+
+  app.put("/api/admin/core-queries/:locationKey", isAuthenticated, isAdmin, async (req, res) => {
+    const locationKey = param(req, "locationKey");
+    const { contextQuery } = req.body;
+    if (typeof contextQuery !== "string") return res.status(400).json({ message: "contextQuery is required" });
+    const row = await storage.upsertCoreQuery(locationKey, contextQuery);
+    res.json(row);
+  });
+
   return httpServer;
 }
