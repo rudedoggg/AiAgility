@@ -280,32 +280,21 @@ export function Header() {
         </DropdownMenu>
       </div>
 
-      <nav className="flex items-center bg-muted/50 p-1 rounded-lg">
-        <Link href="/dashboard">
-          <div
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all cursor-pointer ${
-              location === "/dashboard"
-                ? "bg-white shadow-sm text-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            }`}
-            data-testid="tab-dashboard"
-          >
-            Dashboard
-          </div>
-        </Link>
-
-
-        {navItems.slice(1).map((item) => (
+      <nav className="flex items-center gap-1">
+        {navItems.map((item) => (
           <Link key={item.path} href={item.path}>
             <div
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all cursor-pointer ${
+              className={`px-4 py-1.5 text-sm font-medium transition-all cursor-pointer relative ${
                 location === item.path
-                  ? "bg-white shadow-sm text-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
               data-testid={`tab-${item.label.toLowerCase()}`}
             >
               {item.label}
+              {location === item.path && (
+                <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-primary rounded-full" />
+              )}
             </div>
           </Link>
         ))}

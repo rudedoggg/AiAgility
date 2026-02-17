@@ -30,6 +30,17 @@ import { SummaryCard } from "@/components/shared/SummaryCard";
 import { ScopedHistory } from "@/components/shared/ScopedHistory";
 import { useCoreQueries } from "@/hooks/use-core-queries";
 
+const ACCENT_COLORS = [
+  "border-t-violet-400",
+  "border-t-sky-400",
+  "border-t-emerald-400",
+  "border-t-amber-400",
+  "border-t-rose-400",
+  "border-t-indigo-400",
+  "border-t-teal-400",
+  "border-t-orange-400",
+];
+
 type BucketWithMessages = Bucket & { bucketMessages: Message[] };
 
 export default function LabPage() {
@@ -327,9 +338,9 @@ export default function LabPage() {
     >
          <div className="bg-background h-full">
              <ScrollArea className="h-full">
-                <div className="flex flex-col divide-y divide-border/60">
-                    {buckets.map(bucket => (
-                        <div key={bucket.id} ref={el => { if (el) bucketRefs.current[bucket.id] = el; }}>
+                <div className="flex flex-col gap-3 p-3">
+                    {buckets.map((bucket, index) => (
+                        <div key={bucket.id} ref={el => { if (el) bucketRefs.current[bucket.id] = el; }} className={`bg-background rounded-lg shadow-sm border border-border/40 border-t-[3px] ${ACCENT_COLORS[index % ACCENT_COLORS.length]}`}>
                             <div 
                                 className="flex items-center px-6 py-3 cursor-pointer hover:bg-muted/5 transition-colors group"
                                 onClick={() => toggleBucket(bucket.id)}
