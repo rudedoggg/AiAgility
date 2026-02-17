@@ -24,7 +24,7 @@ export function SummaryCard({ title = "Page Summary", status, done, undone, next
   };
 
   return (
-    <div className={cn("border-b bg-muted/10 transition-all duration-200 ease-in-out", className)}>
+    <div className={cn("border-b bg-muted/5 transition-all duration-200 ease-in-out", className)}>
       <div 
         className="px-4 py-3 cursor-pointer hover:bg-muted/20 transition-colors"
         onClick={() => setIsCollapsed(!isCollapsed)}

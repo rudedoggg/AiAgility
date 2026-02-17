@@ -45,11 +45,11 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="h-screen w-screen bg-background text-foreground font-sans flex flex-col overflow-hidden">
+    <div className="h-screen w-screen bg-muted/30 text-foreground font-sans flex flex-col overflow-hidden">
       <Header />
       <div className="flex-1 pt-[60px] h-full overflow-hidden w-full">
-        <div className="h-full w-full">
-          <div className="min-h-0 h-full overflow-hidden">
+        <div className="h-full w-full p-2">
+          <div className="min-h-0 h-full overflow-hidden bg-background rounded-lg shadow-sm border border-border/40">
             <div className="h-full flex flex-col">
               <div className="p-6 border-b">
                 <div className="flex items-start justify-between gap-4">
