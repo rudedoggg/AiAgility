@@ -29,11 +29,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import { SummaryCard } from "@/components/shared/SummaryCard";
 import { ScopedHistory } from "@/components/shared/ScopedHistory";
+import { useCoreQueries } from "@/hooks/use-core-queries";
 
 type LocalDeliverable = Deliverable & { isOpen?: boolean; bucketMessages?: Message[] };
 
 export default function DeliverablesPage() {
   const queryClient = useQueryClient();
+  const { prependContext } = useCoreQueries();
   const [activeProject, setActiveProject] = useState(getSelectedProject());
 
   const { data: apiDeliverables } = useQuery({
@@ -206,7 +208,7 @@ export default function DeliverablesPage() {
       parentId: activeProject.id,
       parentType: "deliverable_page",
       role: "user",
-      content,
+      content: prependContext("deliverable_page", content),
       timestamp,
       hasSaveableContent: false,
       saved: false,
@@ -587,7 +589,7 @@ export default function DeliverablesPage() {
                                                                     parentId: doc.id,
                                                                     parentType: "deliverable_bucket",
                                                                     role: "user",
-                                                                    content,
+                                                                    content: prependContext("deliverable_bucket", content),
                                                                     timestamp: userMsg.timestamp,
                                                                     hasSaveableContent: false,
                                                                     saved: false,

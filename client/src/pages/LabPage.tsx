@@ -28,10 +28,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import { SummaryCard } from "@/components/shared/SummaryCard";
 import { ScopedHistory } from "@/components/shared/ScopedHistory";
+import { useCoreQueries } from "@/hooks/use-core-queries";
 
 type BucketWithMessages = Bucket & { bucketMessages: Message[] };
 
 export default function LabPage() {
+  const { prependContext } = useCoreQueries();
   const [activeProject, setActiveProject] = useState(getSelectedProject());
   const [buckets, setBuckets] = useState<BucketWithMessages[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -294,7 +296,7 @@ export default function LabPage() {
                         parentId: activeProject.id,
                         parentType: "lab_page",
                         role: "user",
-                        content,
+                        content: prependContext("lab_page", content),
                         timestamp: userMsg.timestamp,
                       }).catch(() => {});
                     }}
@@ -503,7 +505,7 @@ export default function LabPage() {
                                                                   parentId: bucket.id,
                                                                   parentType: "lab_bucket",
                                                                   role: "user",
-                                                                  content,
+                                                                  content: prependContext("lab_bucket", content),
                                                                   timestamp: userMsg.timestamp,
                                                                 }).catch(() => {});
 

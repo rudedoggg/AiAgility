@@ -32,6 +32,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import { SummaryCard } from "@/components/shared/SummaryCard";
 import { ScopedHistory } from "@/components/shared/ScopedHistory";
+import { useCoreQueries } from "@/hooks/use-core-queries";
 
 function getSectionIcon(id: string) {
     switch (id) {
@@ -47,6 +48,7 @@ type LocalSection = Section & { bucketMessages?: Message[] };
 
 export default function GoalsPage() {
   const queryClient = useQueryClient();
+  const { prependContext } = useCoreQueries();
   const [activeProject, setActiveProject] = useState(getSelectedProject());
 
   const { data: goalSections } = useQuery({
@@ -170,7 +172,7 @@ export default function GoalsPage() {
       parentId: activeProject.id,
       parentType: "goal_page",
       role: "user",
-      content,
+      content: prependContext("goal_page", content),
       timestamp,
       hasSaveableContent: false,
       saved: false,
@@ -597,7 +599,7 @@ export default function GoalsPage() {
                                                                   parentId: section.id,
                                                                   parentType: "goal_bucket",
                                                                   role: "user",
-                                                                  content,
+                                                                  content: prependContext("goal_bucket", content),
                                                                   timestamp,
                                                                   hasSaveableContent: false,
                                                                   saved: false,
