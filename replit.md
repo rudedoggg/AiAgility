@@ -46,8 +46,9 @@ A decision-making and project management tool with four main sections: Dashboard
 - `client/src/pages/AdminPage.tsx` — Admin dashboard (users, projects, stats)
 
 ## Recent Changes (Feb 18, 2026)
-- Split status and AI chat into separate cards on Goals, Lab, and Deliverables pages
-- AppShell top-right area now renders children as separate cards (no single wrapper)
+- Reorganized Goals, Lab, Deliverables layout: status card moved to top-left (with scroll overflow), AI chat takes larger top-right, navigation moved to bottom-left beside buckets
+- AppShell now accepts `statusContent` and `chatContent` props (replaced `topRightContent`)
+- Layout: top row = status (25%) + chat (75%), bottom row = nav (18%) + buckets (82%), all resizable
 - Added Dashboard AI chat with ChatWorkspace, message persistence (parentType: dashboard_page), and core query prepending
 - Dashboard redesigned with horizontal resizable split: left (status + executive summary), right (AI chat)
 - Added dashboard_page location to CoreQs admin page (7 total locations now)

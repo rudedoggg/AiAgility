@@ -283,61 +283,57 @@ export default function LabPage() {
     <AppShell 
         navContent={SidebarContent} 
         navTitle="Knowledge Buckets"
-        topRightContent={
-            <>
-                <div className="bg-background rounded-lg shadow-sm border border-border/40 overflow-hidden shrink-0">
-                    <SummaryCard 
-                        title="Lab Status"
-                        status="Seeded from the project summary. Next: capture evidence and open questions."
-                        done={[]}
-                        undone={["Add first evidence bucket"]}
-                        nextSteps={["Add sources", "Log assumptions"]}
-                    />
-                </div>
-                <div className="flex-1 min-h-0 bg-background rounded-lg shadow-sm border border-border/40 overflow-hidden flex flex-col">
-                    <ChatWorkspace
-                        messages={messages}
-                        onSendMessage={(content) => {
-                          const userMsg: Message = {
-                            id: Date.now().toString(),
-                            role: "user",
-                            content,
-                            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                          };
-                          setMessages(prev => [...prev, userMsg]);
+        statusContent={
+            <SummaryCard 
+                title="Lab Status"
+                status="Seeded from the project summary. Next: capture evidence and open questions."
+                done={[]}
+                undone={["Add first evidence bucket"]}
+                nextSteps={["Add sources", "Log assumptions"]}
+            />
+        }
+        chatContent={
+            <ChatWorkspace
+                messages={messages}
+                onSendMessage={(content) => {
+                  const userMsg: Message = {
+                    id: Date.now().toString(),
+                    role: "user",
+                    content,
+                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                  };
+                  setMessages(prev => [...prev, userMsg]);
 
-                          api.messages.create({
-                            parentId: activeProject.id,
-                            parentType: "lab_page",
-                            role: "user",
-                            content: prependContext("lab_page", content),
-                            timestamp: userMsg.timestamp,
-                          }).catch(() => {});
-                        }}
-                        saveDestinations={buckets.map((b) => ({ id: b.id, label: b.name }))}
-                        onSaveContent={(messageId, destinationId) => {
-                            const msg = messages.find((m) => m.id === messageId);
-                            if (!msg) return;
+                  api.messages.create({
+                    parentId: activeProject.id,
+                    parentType: "lab_page",
+                    role: "user",
+                    content: prependContext("lab_page", content),
+                    timestamp: userMsg.timestamp,
+                  }).catch(() => {});
+                }}
+                saveDestinations={buckets.map((b) => ({ id: b.id, label: b.name }))}
+                onSaveContent={(messageId, destinationId) => {
+                    const msg = messages.find((m) => m.id === messageId);
+                    if (!msg) return;
 
-                            setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
+                    setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
 
-                            api.messages.update(messageId, { saved: true }).catch(() => {});
+                    api.messages.update(messageId, { saved: true }).catch(() => {});
 
-                            const noteTitle = msg.content.split("\n")[0]?.slice(0, 80) || "Saved chat";
-                            const noteBody = msg.content;
+                    const noteTitle = msg.content.split("\n")[0]?.slice(0, 80) || "Saved chat";
+                    const noteBody = msg.content;
 
-                            addBucketItem(destinationId, {
-                                id: `chat-${Date.now()}`,
-                                type: 'note',
-                                title: noteTitle,
-                                preview: noteBody,
-                                date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
-                            });
-                        }}
-                        className="flex-1 min-h-0"
-                    />
-                </div>
-            </>
+                    addBucketItem(destinationId, {
+                        id: `chat-${Date.now()}`,
+                        type: 'note',
+                        title: noteTitle,
+                        preview: noteBody,
+                        date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
+                    });
+                }}
+                className="flex-1 min-h-0"
+            />
         }
     >
          <div className="bg-background h-full">
