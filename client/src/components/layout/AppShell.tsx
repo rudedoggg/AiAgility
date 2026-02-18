@@ -19,7 +19,7 @@ export function AppShell({ children, navContent, navTitle, statusContent, chatCo
             {/* Top Section: Status (left) & AI Chat (right) */}
             <ResizablePanel defaultSize={45} minSize={30} maxSize={60}>
                 <ResizablePanelGroup direction="horizontal" className="h-full w-full gap-2">
-                    <ResizablePanel defaultSize={25} minSize={15} maxSize={40} className="flex flex-col h-full">
+                    <ResizablePanel defaultSize={18} minSize={12} maxSize={28} className="flex flex-col h-full">
                         <div className="flex-1 flex flex-col min-h-0 bg-background rounded-lg shadow-sm border border-border/40 overflow-hidden">
                             <ScrollArea className="flex-1">
                                 {statusContent}
@@ -29,7 +29,7 @@ export function AppShell({ children, navContent, navTitle, statusContent, chatCo
                     
                     <ResizableHandle className="bg-transparent hover:bg-border/50 transition-colors w-[3px]" />
 
-                    <ResizablePanel defaultSize={75} className="flex flex-col h-full">
+                    <ResizablePanel defaultSize={82} className="flex flex-col h-full">
                         <div className="flex-1 min-h-0 bg-background rounded-lg shadow-sm border border-border/40 overflow-hidden flex flex-col">
                             {chatContent}
                         </div>
