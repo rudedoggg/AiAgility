@@ -64,7 +64,7 @@ export function SummaryCard({ title = "Page Summary", status, done, undone, next
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                 >
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 pb-2 cursor-default" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-col gap-5 pt-4 pb-2 cursor-default" onClick={(e) => e.stopPropagation()}>
                       <div className="space-y-2">
                         <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Current State</h4>
                         <p className="text-xs font-medium leading-relaxed text-foreground">{status}</p>
