@@ -34,9 +34,9 @@ export function AppShell({ children, navContent, navTitle, topRightContent }: Ap
                     
                     <ResizableHandle className="bg-transparent hover:bg-border/50 transition-colors w-[3px]" />
 
-                    {/* Top Right: Chat & Summary */}
+                    {/* Top Right: Status & Chat as separate cards */}
                     <ResizablePanel defaultSize={80} className="flex flex-col h-full">
-                        <div className="flex-1 flex flex-col min-h-0 bg-background rounded-lg shadow-sm border border-border/40 overflow-hidden">
+                        <div className="flex-1 flex flex-col min-h-0 gap-2">
                             {topRightContent}
                         </div>
                     </ResizablePanel>

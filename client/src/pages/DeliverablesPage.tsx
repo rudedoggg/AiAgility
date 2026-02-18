@@ -375,42 +375,46 @@ export default function DeliverablesPage() {
         navContent={SidebarContent} 
         navTitle="Deliverables"
         topRightContent={
-            <div className="flex flex-col h-full">
-                 <SummaryCard 
-                    title="Deliverables Status"
-                    status="Seeded from the project summary. Next: draft the first deliverable."
-                    done={[]}
-                    undone={["Create deliverable outline"]}
-                    nextSteps={["Draft v1", "Attach memory items"]}
-                />
-                 <ChatWorkspace
-                    messages={messages}
-                    onSendMessage={handleSendMessage}
-                    saveDestinations={deliverables.map((d) => ({ id: d.id, label: d.title }))}
-                    onSaveContent={(messageId, destinationId) => {
-                        const msg = messages.find((m) => m.id === messageId);
-                        if (!msg) return;
+            <>
+                <div className="bg-background rounded-lg shadow-sm border border-border/40 overflow-hidden shrink-0">
+                    <SummaryCard 
+                        title="Deliverables Status"
+                        status="Seeded from the project summary. Next: draft the first deliverable."
+                        done={[]}
+                        undone={["Create deliverable outline"]}
+                        nextSteps={["Draft v1", "Attach memory items"]}
+                    />
+                </div>
+                <div className="flex-1 min-h-0 bg-background rounded-lg shadow-sm border border-border/40 overflow-hidden flex flex-col">
+                    <ChatWorkspace
+                        messages={messages}
+                        onSendMessage={handleSendMessage}
+                        saveDestinations={deliverables.map((d) => ({ id: d.id, label: d.title }))}
+                        onSaveContent={(messageId, destinationId) => {
+                            const msg = messages.find((m) => m.id === messageId);
+                            if (!msg) return;
 
-                        setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
+                            setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
 
-                        api.messages.update(messageId, { saved: true }).catch(() => {});
+                            api.messages.update(messageId, { saved: true }).catch(() => {});
 
-                        const now = new Date();
-                        const label = now.toLocaleDateString([], { month: "short", day: "numeric" });
-                        const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                        const firstLine = msg.content.split("\n")[0]?.trim();
+                            const now = new Date();
+                            const label = now.toLocaleDateString([], { month: "short", day: "numeric" });
+                            const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                            const firstLine = msg.content.split("\n")[0]?.trim();
 
-                        addDeliverableItem(destinationId, {
-                            id: `ver-${Date.now()}`,
-                            type: "doc",
-                            title: `v${Date.now()} • ${time}${firstLine ? ` • ${firstLine.slice(0, 48)}` : ""}`,
-                            preview: msg.content,
-                            date: label,
-                        } as any);
-                    }}
-                    className="flex-1 min-h-0"
-                 />
-            </div>
+                            addDeliverableItem(destinationId, {
+                                id: `ver-${Date.now()}`,
+                                type: "doc",
+                                title: `v${Date.now()} • ${time}${firstLine ? ` • ${firstLine.slice(0, 48)}` : ""}`,
+                                preview: msg.content,
+                                date: label,
+                            } as any);
+                        }}
+                        className="flex-1 min-h-0"
+                    />
+                </div>
+            </>
         }
     >
          <div className="bg-background h-full">

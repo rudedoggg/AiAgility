@@ -394,38 +394,42 @@ export default function GoalsPage() {
         navContent={SidebarContent} 
         navTitle="Project Goals"
         topRightContent={
-            <div className="flex flex-col h-full">
-                <SummaryCard 
-                    title="Goals Status"
-                    status={summaryStatus}
-                    done={summaryDone}
-                    undone={summaryUndone}
-                    nextSteps={summaryNextSteps}
-                />
-                <ChatWorkspace 
-                    messages={messages} 
-                    onSendMessage={handleSendMessage}
-                    saveDestinations={sections.map((s) => ({ id: s.id, label: s.genericName }))}
-                    onSaveContent={(messageId, destinationId) => {
-                        const msg = messages.find((m) => m.id === messageId);
-                        if (!msg) return;
+            <>
+                <div className="bg-background rounded-lg shadow-sm border border-border/40 overflow-hidden shrink-0">
+                    <SummaryCard 
+                        title="Goals Status"
+                        status={summaryStatus}
+                        done={summaryDone}
+                        undone={summaryUndone}
+                        nextSteps={summaryNextSteps}
+                    />
+                </div>
+                <div className="flex-1 min-h-0 bg-background rounded-lg shadow-sm border border-border/40 overflow-hidden flex flex-col">
+                    <ChatWorkspace 
+                        messages={messages} 
+                        onSendMessage={handleSendMessage}
+                        saveDestinations={sections.map((s) => ({ id: s.id, label: s.genericName }))}
+                        onSaveContent={(messageId, destinationId) => {
+                            const msg = messages.find((m) => m.id === messageId);
+                            if (!msg) return;
 
-                        setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
+                            setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, saved: true } : m)));
 
-                        const noteTitle = msg.content.split("\n")[0]?.slice(0, 80) || "Saved chat";
-                        const noteBody = msg.content;
+                            const noteTitle = msg.content.split("\n")[0]?.slice(0, 80) || "Saved chat";
+                            const noteBody = msg.content;
 
-                        addSectionItem(destinationId, {
-                            id: `chat-${Date.now()}`,
-                            type: 'note',
-                            title: noteTitle,
-                            preview: noteBody,
-                            date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
-                        });
-                    }}
-                    className="flex-1 min-h-0"
-                />
-            </div>
+                            addSectionItem(destinationId, {
+                                id: `chat-${Date.now()}`,
+                                type: 'note',
+                                title: noteTitle,
+                                preview: noteBody,
+                                date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' }),
+                            });
+                        }}
+                        className="flex-1 min-h-0"
+                    />
+                </div>
+            </>
         }
     >
         {/* Bottom: All Goal Sections */}

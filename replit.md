@@ -45,7 +45,15 @@ A decision-making and project management tool with four main sections: Dashboard
 - `client/src/pages/LandingPage.tsx` — Public landing page for unauthenticated users
 - `client/src/pages/AdminPage.tsx` — Admin dashboard (users, projects, stats)
 
-## Recent Changes (Feb 17, 2026)
+## Recent Changes (Feb 18, 2026)
+- Split status and AI chat into separate cards on Goals, Lab, and Deliverables pages
+- AppShell top-right area now renders children as separate cards (no single wrapper)
+- Added Dashboard AI chat with ChatWorkspace, message persistence (parentType: dashboard_page), and core query prepending
+- Dashboard redesigned with horizontal resizable split: left (status + executive summary), right (AI chat)
+- Added dashboard_page location to CoreQs admin page (7 total locations now)
+- Location keys: dashboard_page, goal_page, goal_bucket, lab_page, lab_bucket, deliverable_page, deliverable_bucket
+
+## Previous Changes (Feb 17, 2026)
 - Added CoreQs admin page (/admin/coreqs) for managing AI context queries
 - `core_queries` table stores context queries per AI interaction location (6 locations)
 - Location keys: goal_page, goal_bucket, lab_page, lab_bucket, deliverable_page, deliverable_bucket

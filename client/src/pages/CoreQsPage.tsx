@@ -5,9 +5,17 @@ import { api, type ApiCoreQuery } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Target, Beaker, FileText, MessageSquare, FolderOpen } from "lucide-react";
+import { Save, Target, Beaker, FileText, MessageSquare, FolderOpen, LayoutDashboard } from "lucide-react";
 
 const LOCATIONS = [
+  {
+    key: "dashboard_page",
+    label: "Dashboard — Page-Level AI",
+    description: "This context is prepended to every user message in the AI chat area on the Dashboard page.",
+    icon: LayoutDashboard,
+    page: "Dashboard",
+    scope: "Page Chat",
+  },
   {
     key: "goal_page",
     label: "Goals — Page-Level AI",
