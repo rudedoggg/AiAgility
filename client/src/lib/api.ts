@@ -75,17 +75,25 @@ async function json<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 export const api = {
   projects: {
-    list: () => fetch("/api/projects", { credentials: "include" }).then(r => r.json()) as Promise<ApiProject[]>,
-    get: (id: string) => fetch(`/api/projects/${id}`, { credentials: "include" }).then(r => r.json()) as Promise<ApiProject>,
+    list: () => fetchJson<ApiProject[]>("/api/projects"),
+    get: (id: string) => fetchJson<ApiProject>(`/api/projects/${id}`),
     create: (data: Partial<ApiProject>) => apiRequest("POST", "/api/projects", data).then(json<ApiProject>),
     update: (id: string, data: Partial<ApiProject>) => apiRequest("PATCH", `/api/projects/${id}`, data).then(json<ApiProject>),
     delete: (id: string) => apiRequest("DELETE", `/api/projects/${id}`),
   },
 
   goals: {
-    list: (projectId: string) => fetch(`/api/projects/${projectId}/goals`, { credentials: "include" }).then(r => r.json()) as Promise<ApiGoalSection[]>,
+    list: (projectId: string) => fetchJson<ApiGoalSection[]>(`/api/projects/${projectId}/goals`),
     create: (projectId: string, data: Partial<ApiGoalSection>) => apiRequest("POST", `/api/projects/${projectId}/goals`, data).then(json<ApiGoalSection>),
     update: (id: string, data: Partial<ApiGoalSection>) => apiRequest("PATCH", `/api/goals/${id}`, data).then(json<ApiGoalSection>),
     delete: (id: string) => apiRequest("DELETE", `/api/goals/${id}`),
@@ -93,7 +101,7 @@ export const api = {
   },
 
   lab: {
-    list: (projectId: string) => fetch(`/api/projects/${projectId}/lab`, { credentials: "include" }).then(r => r.json()) as Promise<ApiLabBucket[]>,
+    list: (projectId: string) => fetchJson<ApiLabBucket[]>(`/api/projects/${projectId}/lab`),
     create: (projectId: string, data: Partial<ApiLabBucket>) => apiRequest("POST", `/api/projects/${projectId}/lab`, data).then(json<ApiLabBucket>),
     update: (id: string, data: Partial<ApiLabBucket>) => apiRequest("PATCH", `/api/lab/${id}`, data).then(json<ApiLabBucket>),
     delete: (id: string) => apiRequest("DELETE", `/api/lab/${id}`),
@@ -101,7 +109,7 @@ export const api = {
   },
 
   deliverables: {
-    list: (projectId: string) => fetch(`/api/projects/${projectId}/deliverables`, { credentials: "include" }).then(r => r.json()) as Promise<ApiDeliverable[]>,
+    list: (projectId: string) => fetchJson<ApiDeliverable[]>(`/api/projects/${projectId}/deliverables`),
     create: (projectId: string, data: Partial<ApiDeliverable>) => apiRequest("POST", `/api/projects/${projectId}/deliverables`, data).then(json<ApiDeliverable>),
     update: (id: string, data: Partial<ApiDeliverable>) => apiRequest("PATCH", `/api/deliverables/${id}`, data).then(json<ApiDeliverable>),
     delete: (id: string) => apiRequest("DELETE", `/api/deliverables/${id}`),
@@ -109,20 +117,20 @@ export const api = {
   },
 
   items: {
-    list: (parentType: string, parentId: string) => fetch(`/api/items/${parentType}/${parentId}`, { credentials: "include" }).then(r => r.json()) as Promise<ApiBucketItem[]>,
+    list: (parentType: string, parentId: string) => fetchJson<ApiBucketItem[]>(`/api/items/${parentType}/${parentId}`),
     create: (data: Partial<ApiBucketItem>) => apiRequest("POST", "/api/items", data).then(json<ApiBucketItem>),
     delete: (id: string) => apiRequest("DELETE", `/api/items/${id}`),
   },
 
   messages: {
-    list: (parentType: string, parentId: string) => fetch(`/api/messages/${parentType}/${parentId}`, { credentials: "include" }).then(r => r.json()) as Promise<ApiChatMessage[]>,
+    list: (parentType: string, parentId: string) => fetchJson<ApiChatMessage[]>(`/api/messages/${parentType}/${parentId}`),
     create: (data: Partial<ApiChatMessage>) => apiRequest("POST", "/api/messages", data).then(json<ApiChatMessage>),
     update: (id: string, data: Partial<ApiChatMessage>) => apiRequest("PATCH", `/api/messages/${id}`, data).then(json<ApiChatMessage>),
   },
 
   coreQueries: {
-    list: () => fetch("/api/core-queries", { credentials: "include" }).then(r => r.json()) as Promise<ApiCoreQuery[]>,
-    listAdmin: () => fetch("/api/admin/core-queries", { credentials: "include" }).then(r => r.json()) as Promise<ApiCoreQuery[]>,
+    list: () => fetchJson<ApiCoreQuery[]>("/api/core-queries"),
+    listAdmin: () => fetchJson<ApiCoreQuery[]>("/api/admin/core-queries"),
     update: (locationKey: string, contextQuery: string) => apiRequest("PUT", `/api/admin/core-queries/${locationKey}`, { contextQuery }).then(json<ApiCoreQuery>),
   },
 };

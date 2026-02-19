@@ -77,7 +77,7 @@ export default function LabPage() {
   }, [apiPageMessages]);
 
   useEffect(() => {
-    if (!apiBuckets) return;
+    if (!apiBuckets || !Array.isArray(apiBuckets)) return;
 
     setBuckets(prev => {
       const prevMap = new Map(prev.map(b => [b.id, b]));
