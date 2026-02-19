@@ -43,6 +43,7 @@ fi
 GOVERNANCE_FILES=(
   "CONSTITUTION.md"
   "CLAUDE.md"
+  "GEMINI.md"
   ".cursorrules"
   "replit.md"
 )
