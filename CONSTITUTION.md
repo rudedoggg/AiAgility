@@ -503,10 +503,11 @@ Warning signs:
 ### Starting a Session
 
 1. Read this constitution
-2. Read `replit.md` for latest project state and recent changes
-3. Check for any in-progress work from prior sessions
-4. Sync with git: `git fetch origin && git pull --rebase origin main`
-5. Run quality checks to verify clean baseline: `npm run check`
+2. Run `npm run constitution` to sync governance files with latest from GitHub
+3. Read `replit.md` for latest project state and recent changes
+4. Check for any in-progress work from prior sessions
+5. Sync with git: `git fetch origin && git pull --rebase origin main`
+6. Run quality checks to verify clean baseline: `npm run check`
 
 ### During Work
 

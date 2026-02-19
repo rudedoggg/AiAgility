@@ -2,6 +2,8 @@
 
 Read `CONSTITUTION.md` in this repo for the full governance framework (anti-slop rules, no workarounds policy, cognitive guardrails, session protocol, etc.).
 
+**Session Start**: Run `npm run constitution` before starting any work to ensure governance files are current.
+
 ---
 
 ## Critical Rules (Summary)
