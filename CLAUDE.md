@@ -4,8 +4,6 @@ Read the global governance framework in `~/.claude/CLAUDE.md` first. This file p
 
 Also read `CONSTITUTION.md` in this repo for the full combined reference.
 
-**Session Start**: Run `npm run constitution` before starting any work to ensure governance files are current.
-
 ---
 
 ## What Is AgilityAI?

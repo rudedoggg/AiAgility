@@ -2,8 +2,6 @@
 
 > **AI Agents**: Read `CONSTITUTION.md` for the full governance framework (anti-slop rules, no workarounds policy, cognitive guardrails, zero-tolerance rules, session protocol). It is the single source of truth for how you work.
 
-> **Session Start**: Run `npm run constitution` before starting any work to ensure governance files are current.
-
 ## Overview
 A decision-making and project management tool with four main sections: Dashboard, Goals, Lab/Knowledge Buckets, and Deliverables. Projects are selected via a header dropdown and switching projects updates all pages. Supports two levels of AI chat: global page-level and bucket-scoped conversations. Features user authentication via Replit Auth (OIDC) with admin and regular user roles.
 
