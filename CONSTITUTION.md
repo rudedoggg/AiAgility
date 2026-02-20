@@ -111,6 +111,28 @@ The app has four main sections:
 | **Deployment** | Vercel (frontend) + Railway (backend) + Supabase (DB + auth) | Client: vite build, Server: esbuild → dist/index.cjs |
 | **Package Manager** | npm | |
 
+### Environment Variables
+
+All environment variables are stored in **Railway** (Settings → Variables).
+
+#### Backend (Railway)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string. Found in Supabase: Settings → Database → Connection string (URI, Direct connection). |
+| `SUPABASE_URL` | Yes | Supabase project URL. Found in Supabase: Settings → API → Project URL. |
+| `CORS_ORIGIN` | Yes (production) | Your Vercel frontend URL. Server crashes on startup if missing in production. |
+| `PORT` | No | Railway sets this automatically. Defaults to `3001` locally. |
+| `NODE_ENV` | No | Railway sets to `production` automatically. Enables SSL for DB and strict CORS. |
+
+#### Frontend (Vercel — build-time only)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_SUPABASE_URL` | Yes | Same value as `SUPABASE_URL` above. Found in Supabase: Settings → API → Project URL. |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Found in Supabase: Settings → API → Project API keys → anon public. |
+| `VITE_API_BASE_URL` | Yes | Your Railway service public domain. Found in Railway: click your service → Settings → Networking → Public Networking. |
+
 ### Key Directory Structure
 
 ```
