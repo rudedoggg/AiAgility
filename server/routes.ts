@@ -1,11 +1,19 @@
 import type { Express, Request, Response, RequestHandler } from "express";
 import { type Server } from "http";
+import { z } from "zod";
 import { storage } from "./storage";
 import { seedDemoData } from "./seed";
 import { isAuthenticated, isAdmin, authStorage } from "./auth";
 import { db } from "./db";
 import { users, projects } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
+
+const syncUserSchema = z.object({
+  email: z.string().email().nullable(),
+  firstName: z.string().max(255).nullable(),
+  lastName: z.string().max(255).nullable(),
+  profileImageUrl: z.string().url().nullable(),
+});
 
 function getUserId(req: Request): string {
   return req.userId!;
@@ -28,7 +36,11 @@ export async function registerRoutes(
   // === AUTH SYNC (called by frontend after Supabase login) ===
   app.post("/api/auth/sync", isAuthenticated, async (req: Request, res: Response) => {
     const userId = getUserId(req);
-    const { email, firstName, lastName, profileImageUrl } = req.body;
+    const parsed = syncUserSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request body", errors: parsed.error.flatten().fieldErrors });
+    }
+    const { email, firstName, lastName, profileImageUrl } = parsed.data;
     const user = await authStorage.upsertUser({
       id: userId,
       email: email || null,
@@ -205,32 +217,54 @@ export async function registerRoutes(
 
   // === BUCKET ITEMS ===
   app.get("/api/items/:parentType/:parentId", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const projectId = await storage.getProjectIdForParent(param(req, "parentId"), param(req, "parentType"));
+    if (!projectId || !await verifyProjectOwnership(projectId, userId)) return res.status(404).json({ message: "Not found" });
     const rows = await storage.listBucketItems(param(req, "parentId"), param(req, "parentType"));
     res.json(rows);
   });
 
   app.post("/api/items", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const projectId = await storage.getProjectIdForParent(req.body.parentId, req.body.parentType);
+    if (!projectId || !await verifyProjectOwnership(projectId, userId)) return res.status(404).json({ message: "Not found" });
     const row = await storage.createBucketItem(req.body);
     res.status(201).json(row);
   });
 
   app.delete("/api/items/:id", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const item = await storage.getBucketItem(param(req, "id"));
+    if (!item) return res.status(404).json({ message: "Not found" });
+    const projectId = await storage.getProjectIdForParent(item.parentId, item.parentType);
+    if (!projectId || !await verifyProjectOwnership(projectId, userId)) return res.status(404).json({ message: "Not found" });
     await storage.deleteBucketItem(param(req, "id"));
     res.status(204).end();
   });
 
   // === CHAT MESSAGES ===
   app.get("/api/messages/:parentType/:parentId", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const projectId = await storage.getProjectIdForParent(param(req, "parentId"), param(req, "parentType"));
+    if (!projectId || !await verifyProjectOwnership(projectId, userId)) return res.status(404).json({ message: "Not found" });
     const rows = await storage.listChatMessages(param(req, "parentId"), param(req, "parentType"));
     res.json(rows);
   });
 
   app.post("/api/messages", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const projectId = await storage.getProjectIdForParent(req.body.parentId, req.body.parentType);
+    if (!projectId || !await verifyProjectOwnership(projectId, userId)) return res.status(404).json({ message: "Not found" });
     const row = await storage.createChatMessage(req.body);
     res.status(201).json(row);
   });
 
   app.patch("/api/messages/:id", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const message = await storage.getChatMessage(param(req, "id"));
+    if (!message) return res.status(404).json({ message: "Not found" });
+    const projectId = await storage.getProjectIdForParent(message.parentId, message.parentType);
+    if (!projectId || !await verifyProjectOwnership(projectId, userId)) return res.status(404).json({ message: "Not found" });
     const row = await storage.updateChatMessage(param(req, "id"), req.body);
     if (!row) return res.status(404).json({ message: "Not found" });
     res.json(row);

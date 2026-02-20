@@ -13,7 +13,7 @@ async function fetchAppUser(): Promise<User | null> {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (res.status === 401) return null;
+  if (res.status === 401 || res.status === 404) return null;
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
   return res.json();
 }
@@ -26,19 +26,23 @@ async function syncUser(): Promise<void> {
   const supabaseUser = session.user;
   const meta = supabaseUser.user_metadata || {};
 
-  await fetch(`${API_BASE_URL}/api/auth/sync`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email: supabaseUser.email || null,
-      firstName: meta.first_name || meta.full_name?.split(" ")[0] || null,
-      lastName: meta.last_name || meta.full_name?.split(" ").slice(1).join(" ") || null,
-      profileImageUrl: meta.avatar_url || meta.picture || null,
-    }),
-  });
+  try {
+    await fetch(`${API_BASE_URL}/api/auth/sync`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: supabaseUser.email || null,
+        firstName: meta.first_name || meta.full_name?.split(" ")[0] || null,
+        lastName: meta.last_name || meta.full_name?.split(" ").slice(1).join(" ") || null,
+        profileImageUrl: meta.avatar_url || meta.picture || null,
+      }),
+    });
+  } catch (err) {
+    console.warn("Failed to sync user profile:", err);
+  }
 }
 
 export function useAuth() {

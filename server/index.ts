@@ -14,8 +14,9 @@ declare module "http" {
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || true,
-    credentials: true,
+    origin: process.env.CORS_ORIGIN || (process.env.NODE_ENV === "production"
+      ? (() => { throw new Error("CORS_ORIGIN must be set in production"); })()
+      : true),
   }),
 );
 

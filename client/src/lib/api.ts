@@ -1,5 +1,4 @@
-import { apiRequest } from "./queryClient";
-import { supabase } from "./supabase";
+import { apiRequest, getAuthHeaders } from "./queryClient";
 import { API_BASE_URL } from "./config";
 
 export type ApiProject = {
@@ -77,13 +76,8 @@ async function json<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
+export async function fetchJson<T>(url: string): Promise<T> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_BASE_URL}${url}`, { headers });
   if (!res.ok) {
     throw new Error(`Request failed: ${res.status}`);
