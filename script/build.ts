@@ -13,7 +13,7 @@ const allowlist = [
   "drizzle-zod",
   "express",
   "express-rate-limit",
-  "jsonwebtoken",
+  "jose",
   "multer",
   "nanoid",
   "nodemailer",

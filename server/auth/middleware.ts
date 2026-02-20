@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import jwt from "jsonwebtoken";
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { authStorage } from "./storage";
 
 declare global {
@@ -10,7 +10,15 @@ declare global {
   }
 }
 
-const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+
+if (!SUPABASE_URL) {
+  throw new Error("SUPABASE_URL must be set");
+}
+
+const JWKS = createRemoteJWKSet(
+  new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`),
+);
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -21,10 +29,9 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const token = authHeader.slice(7);
 
   try {
-    if (!JWT_SECRET) {
-      throw new Error("SUPABASE_JWT_SECRET is not configured");
-    }
-    const payload = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: `${SUPABASE_URL}/auth/v1`,
+    });
     req.userId = payload.sub;
     next();
   } catch {
