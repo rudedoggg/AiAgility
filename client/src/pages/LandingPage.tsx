@@ -1,6 +1,14 @@
 import { Target, Beaker, FileText, LayoutDashboard, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
 import heroImage from "@/assets/images/hero-dashboard.png";
+
+function handleLogin(): void {
+  supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: window.location.origin },
+  });
+}
 
 export default function LandingPage() {
   return (
@@ -14,12 +22,8 @@ export default function LandingPage() {
             <span className="font-bold text-lg tracking-tight" data-testid="text-landing-app-name">AgilityAI</span>
           </div>
           <div className="flex items-center gap-3">
-            <a href="/api/login">
-              <Button variant="ghost" data-testid="button-landing-signin">Sign In</Button>
-            </a>
-            <a href="/api/login">
-              <Button data-testid="button-landing-get-started">Get Started</Button>
-            </a>
+            <Button variant="ghost" data-testid="button-landing-signin" onClick={handleLogin}>Sign In</Button>
+            <Button data-testid="button-landing-get-started" onClick={handleLogin}>Get Started</Button>
           </div>
         </div>
       </nav>
@@ -36,11 +40,9 @@ export default function LandingPage() {
                 decision-ready deliverables — all in one workspace with AI assistance.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <a href="/api/login">
-                  <Button size="lg" className="gap-2 text-base px-6" data-testid="button-landing-cta">
+                <Button size="lg" className="gap-2 text-base px-6" data-testid="button-landing-cta" onClick={handleLogin}>
                     Get Started <ArrowRight className="w-4 h-4" />
                   </Button>
-                </a>
               </div>
               <div className="flex items-center gap-4 pt-2">
                 <span className="text-sm text-muted-foreground" data-testid="text-landing-trust-1">Free to use</span>
@@ -106,11 +108,9 @@ export default function LandingPage() {
             <p className="text-muted-foreground">
               Sign up in seconds and start organizing your project today.
             </p>
-            <a href="/api/login">
-              <Button size="lg" className="gap-2 text-base px-8 mt-2" data-testid="button-landing-bottom-cta">
+            <Button size="lg" className="gap-2 text-base px-8 mt-2" data-testid="button-landing-bottom-cta" onClick={handleLogin}>
                 Get Started Free <ArrowRight className="w-4 h-4" />
               </Button>
-            </a>
           </div>
         </section>
       </main>

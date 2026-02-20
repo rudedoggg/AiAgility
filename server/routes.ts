@@ -2,13 +2,13 @@ import type { Express, Request, Response, RequestHandler } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
 import { seedDemoData } from "./seed";
-import { isAuthenticated, authStorage } from "./replit_integrations/auth";
+import { isAuthenticated, isAdmin, authStorage } from "./auth";
 import { db } from "./db";
 import { users, projects } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
 function getUserId(req: Request): string {
-  return (req as any).user?.claims?.sub;
+  return req.userId!;
 }
 
 function param(req: Request, key: string): string {
@@ -20,18 +20,32 @@ async function verifyProjectOwnership(projectId: string, userId: string): Promis
   return !!project && project.userId === userId;
 }
 
-const isAdmin: RequestHandler = async (req, res, next) => {
-  const userId = getUserId(req);
-  if (!userId) return res.status(401).json({ message: "Unauthorized" });
-  const user = await authStorage.getUser(userId);
-  if (!user?.isAdmin) return res.status(403).json({ message: "Forbidden" });
-  next();
-};
-
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  // === AUTH SYNC (called by frontend after Supabase login) ===
+  app.post("/api/auth/sync", isAuthenticated, async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const { email, firstName, lastName, profileImageUrl } = req.body;
+    const user = await authStorage.upsertUser({
+      id: userId,
+      email: email || null,
+      firstName: firstName || null,
+      lastName: lastName || null,
+      profileImageUrl: profileImageUrl || null,
+    });
+    res.json(user);
+  });
+
+  // === GET CURRENT USER ===
+  app.get("/api/auth/user", isAuthenticated, async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const user = await authStorage.getUser(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  });
 
   // === PROJECTS ===
   app.get("/api/projects", isAuthenticated, async (req, res) => {

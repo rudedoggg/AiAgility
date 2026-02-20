@@ -28,8 +28,8 @@ Four main sections:
 | Forms | React Hook Form + Zod resolvers |
 | Backend | Express 5 + TypeScript, Node 20 |
 | Database | PostgreSQL 16 + Drizzle ORM |
-| Auth | Replit OIDC + Passport.js (first user auto-admin) |
-| Deployment | Replit (esbuild → dist/index.cjs) |
+| Auth | Supabase Auth + JWT (first user auto-admin) |
+| Deployment | Vercel (frontend) + Railway (backend) + Supabase (database + auth) |
 | Package Manager | npm |
 
 ## Key Directories
@@ -49,10 +49,10 @@ server/
   storage.ts         # DatabaseStorage (IStorage interface)
   db.ts              # Drizzle connection
   seed.ts            # Demo data seeding
-  replit_integrations/auth/  # Auth module — DO NOT create a second one
+  auth/              # Auth module (JWT middleware, user storage)
 shared/
   schema.ts          # Drizzle table definitions + Zod schemas
-  models/auth.ts     # Users and sessions tables
+  models/auth.ts     # Users table
 ```
 
 ## Quality Checks
@@ -66,7 +66,7 @@ No linter or test framework configured yet.
 
 ## Known Gotchas
 
-1. **Auth is in `server/replit_integrations/auth/`** — Use `isAuthenticated` and `isAdmin` from there
+1. **Auth is in `server/auth/`** — Use `isAuthenticated` and `isAdmin` from there. JWT verified via Supabase JWT secret.
 2. **Drizzle ORM, NOT Prisma** — Schema in `shared/schema.ts`, migrations via `drizzle-kit push`
 3. **No Redux/Zustand** — React Query for server state + localStorage (`projectStore.ts`) for selected project
 4. **All resources are user-scoped** — Every route must verify `userId` ownership via `verifyProjectOwnership()`

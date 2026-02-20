@@ -81,13 +81,13 @@ The app has four main sections:
 │  ├── Data fetching (@tanstack/react-query)          │
 │  └── State (React Query + localStorage projectStore)│
 │                                                     │
-│  ↕ fetch with credentials: "include"                │
+│  ↕ fetch with Authorization: Bearer <JWT>           │
 │                                                     │
-│  Server (Express 5 + TypeScript)                    │
+│  Server (Express 5 + TypeScript) — Railway          │
 │  ├── Routes (CRUD + admin, all authenticated)       │
 │  ├── Storage layer (IStorage → DatabaseStorage)     │
-│  ├── Auth (Replit OIDC + Passport.js)               │
-│  └── Sessions (PostgreSQL via connect-pg-simple)    │
+│  ├── Auth (Supabase JWT verification)               │
+│  └── CORS (configured for Vercel frontend)          │
 │                                                     │
 │  ↕ Drizzle ORM                                      │
 │                                                     │
@@ -107,8 +107,8 @@ The app has four main sections:
 | **Forms** | React Hook Form + Zod resolvers | Runtime validation |
 | **Backend** | Express 5 + TypeScript | Node 20, strict mode |
 | **Database** | PostgreSQL 16 + Drizzle ORM | Auto migrations, Zod schemas via drizzle-zod |
-| **Auth** | Replit OIDC + Passport.js | First user auto-admin, sessions in DB |
-| **Deployment** | Replit | Build: esbuild → dist/index.cjs |
+| **Auth** | Supabase Auth + JWT | First user auto-admin, stateless JWT verification |
+| **Deployment** | Vercel (frontend) + Railway (backend) + Supabase (DB + auth) | Client: vite build, Server: esbuild → dist/index.cjs |
 | **Package Manager** | npm | |
 
 ### Key Directory Structure
@@ -128,10 +128,10 @@ server/
   storage.ts         # DatabaseStorage (IStorage interface)
   db.ts              # Drizzle connection
   seed.ts            # Demo data seeding
-  replit_integrations/auth/  # Auth module (DO NOT create a second auth system)
+  auth/              # Auth module (JWT middleware, user storage)
 shared/
   schema.ts          # Drizzle table definitions + Zod insert schemas
-  models/auth.ts     # Users and sessions table schemas
+  models/auth.ts     # Users table schema
 ```
 
 ### Data Model (Core Tables)
@@ -145,7 +145,7 @@ shared/
 | `bucket_items` | Attachments/memories | parentId, parentType (goal/lab/deliverable) — polymorphic |
 | `chat_messages` | AI conversations | parentId, parentType (7 location types) — polymorphic |
 | `core_queries` | AI context prompts | locationKey (7 locations), contextQuery |
-| `users` | Replit Auth users | email, isAdmin, profileImageUrl |
+| `users` | App users (synced from Supabase Auth) | email, isAdmin, profileImageUrl |
 
 ### Design System Rules
 
@@ -159,7 +159,7 @@ shared/
 
 ### Known Gotchas — READ BEFORE CODING
 
-1. **Auth is in `server/replit_integrations/auth/`** — Do NOT create a new auth system or middleware. Use `isAuthenticated` and `isAdmin` from there.
+1. **Auth is in `server/auth/`** — Use `isAuthenticated` and `isAdmin` from there. JWT verified via Supabase JWT secret.
 2. **We use Drizzle ORM, NOT Prisma** — Schema is in `shared/schema.ts`. Migrations via `drizzle-kit push`.
 3. **No Redux/Zustand** — State management is React Query for server state + localStorage (`projectStore.ts`) for selected project. Do not introduce a state management library.
 4. **All resources are user-scoped** — Every API route must verify `userId` ownership. Use `verifyProjectOwnership()` in routes.
@@ -237,7 +237,7 @@ These rules are **non-negotiable**. If any fail, STOP and fix before proceeding.
 | ZERO hardcoded secrets | Secrets in code get committed, pushed, and leaked. Use environment variables. |
 | ALL user input validated with Zod | Unvalidated input is an injection attack waiting to happen. Use the Zod schemas from drizzle-zod. |
 | ALL SQL through Drizzle ORM | Never write raw SQL. Drizzle handles parameterization. |
-| ZERO secrets committed to git | Use `.env` files (gitignored), secret managers, or Replit Secrets. |
+| ZERO secrets committed to git | Use `.env` files (gitignored) or secret managers. |
 | ALL API routes check userId ownership | Data leaks between users are unacceptable. Every route must verify ownership. |
 
 ### Issue Tracking (Zero Tolerance)
@@ -482,7 +482,7 @@ Warning signs:
 - Bug fix touching >5 files
 - New abstractions or services
 - Workaround exceptions
-- Changes to deployment configuration (`.replit`, build scripts)
+- Changes to deployment configuration (vercel.json, build scripts)
 - Database schema changes (new tables, column modifications)
 - New npm dependencies
 
@@ -503,7 +503,7 @@ Warning signs:
 ### Starting a Session
 
 1. Read this constitution
-2. Read `replit.md` for latest project state and recent changes
+2. Read `replit.md` (project state) for latest project state and recent changes
 3. Check for any in-progress work from prior sessions
 4. Sync with git: `git fetch origin && git pull --rebase origin main`
 5. Run quality checks to verify clean baseline: `npm run check`

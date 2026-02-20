@@ -6,9 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FolderOpen, ShieldCheck, ShieldOff, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import type { User } from "@shared/models/auth";
+import { supabase } from "@/lib/supabase";
+import { API_BASE_URL } from "@/lib/config";
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "include" });
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE_URL}${url}`, { headers });
   if (!res.ok) throw new Error(`${res.status}: ${res.statusText}`);
   return res.json();
 }
@@ -34,9 +40,13 @@ export default function AdminPage() {
 
   const toggleAdminMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const res = await fetch(`/api/admin/users/${userId}/toggle-admin`, {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/toggle-admin`, {
         method: "PATCH",
-        credentials: "include",
+        headers,
       });
       if (!res.ok) throw new Error("Failed");
       return res.json();
