@@ -52,15 +52,32 @@ export function useAuth() {
   const [isSessionLoading, setIsSessionLoading] = useState(true);
 
   useEffect(() => {
+    let settled = false;
+
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        setIsSessionLoading(false);
+      }
+    }, 5000);
+
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setIsSessionLoading(false);
+      if (!settled) {
+        settled = true;
+        setSession(data.session);
+        setIsSessionLoading(false);
+      }
+    }).catch(() => {
+      if (!settled) {
+        settled = true;
+        setIsSessionLoading(false);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         setSession(newSession);
-        
+
         if (event === "SIGNED_IN") {
           await syncUser();
           queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -72,7 +89,10 @@ export function useAuth() {
       },
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, [queryClient]);
 
   const { data: user, isLoading: isUserLoading } = useQuery<User | null>({
