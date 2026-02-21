@@ -102,7 +102,7 @@ import {
 export function Header() {
   const [location] = useLocation();
   const [projectName, setProjectName] = useState(getSelectedProject().name);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const userInitials = user
     ? ((user.firstName?.[0] || "") + (user.lastName?.[0] || "")).toUpperCase() || (user.email?.[0] || "?").toUpperCase()
@@ -366,7 +366,7 @@ export function Header() {
               </>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem data-testid="menu-user-signout" onSelect={() => (window.location.href = "/api/logout")}>
+            <DropdownMenuItem data-testid="menu-user-signout" onSelect={() => logout()}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign out
             </DropdownMenuItem>
