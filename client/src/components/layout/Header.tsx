@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ChevronDown, FolderPlus, LogOut, Settings, User, Shield, MessageSquare } from "lucide-react";
+import { ChevronDown, FolderPlus, LogOut, Settings, User, Shield, MessageSquare, Sun, Moon, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getSelectedProject, setSelectedProject, subscribeToSelectedProject } from "@/lib/projectStore";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 
@@ -103,6 +104,7 @@ export function Header() {
   const [location] = useLocation();
   const [projectName, setProjectName] = useState(getSelectedProject().name);
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const userInitials = user
     ? ((user.firstName?.[0] || "") + (user.lastName?.[0] || "")).toUpperCase() || (user.email?.[0] || "?").toUpperCase()
@@ -284,11 +286,10 @@ export function Header() {
         {navItems.map((item) => (
           <Link key={item.path} href={item.path}>
             <div
-              className={`px-4 py-1.5 text-sm font-medium transition-all cursor-pointer relative ${
-                location === item.path
+              className={`px-4 py-1.5 text-sm font-medium transition-all cursor-pointer relative ${location === item.path
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
               data-testid={`tab-${item.label.toLowerCase()}`}
             >
               {item.label}
@@ -301,6 +302,17 @@ export function Header() {
       </nav>
 
       <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-foreground"
+          data-testid="button-theme-toggle"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          aria-label="Toggle theme"
+        >
+          {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </Button>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -362,6 +374,10 @@ export function Header() {
                 <DropdownMenuItem data-testid="menu-user-coreqs" onSelect={() => (window.location.href = "/admin/coreqs")}>
                   <MessageSquare className="w-4 h-4 mr-2" />
                   CoreQs
+                </DropdownMenuItem>
+                <DropdownMenuItem data-testid="menu-user-styleguide" onSelect={() => (window.location.href = "/admin/style-guide")}>
+                  <Palette className="w-4 h-4 mr-2" />
+                  Style Guide
                 </DropdownMenuItem>
               </>
             )}
