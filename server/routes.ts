@@ -7,6 +7,7 @@ import { isAuthenticated, isAdmin, authStorage } from "./auth";
 import { db } from "./db";
 import { users, projects } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
+import { getAIProvider, type AIMessage } from "./ai";
 
 const syncUserSchema = z.object({
   email: z.string().email().nullable(),
@@ -26,6 +27,26 @@ function param(req: Request, key: string): string {
 async function verifyProjectOwnership(projectId: string, userId: string): Promise<boolean> {
   const project = await storage.getProject(projectId);
   return !!project && project.userId === userId;
+}
+
+async function getProjectIdForChatParent(parentId: string, parentType: string): Promise<string | undefined> {
+  switch (parentType) {
+    case "dashboard_page":
+    case "goal_page":
+    case "lab_page":
+    case "deliverable_page": {
+      const project = await storage.getProject(parentId);
+      return project?.id;
+    }
+    case "goal_bucket":
+      return storage.getProjectIdForGoal(parentId);
+    case "lab_bucket":
+      return storage.getProjectIdForLabBucket(parentId);
+    case "deliverable_bucket":
+      return storage.getProjectIdForDeliverable(parentId);
+    default:
+      return undefined;
+  }
 }
 
 export async function registerRoutes(
@@ -268,6 +289,109 @@ export async function registerRoutes(
     const row = await storage.updateChatMessage(param(req, "id"), req.body);
     if (!row) return res.status(404).json({ message: "Not found" });
     res.json(row);
+  });
+
+  // === AI CHAT (SSE streaming) ===
+  const chatRequestSchema = z.object({
+    parentId: z.string().min(1),
+    parentType: z.string().min(1),
+    content: z.string().min(1),
+  });
+
+  app.post("/api/chat", isAuthenticated, async (req: Request, res: Response) => {
+    const userId = getUserId(req);
+    const parsed = chatRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request body", errors: parsed.error.flatten().fieldErrors });
+    }
+
+    const { parentId, parentType, content } = parsed.data;
+
+    const projectId = await getProjectIdForChatParent(parentId, parentType);
+    if (!projectId || !await verifyProjectOwnership(projectId, userId)) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    // Save user message
+    const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const userMessage = await storage.createChatMessage({
+      parentId,
+      parentType,
+      role: "user",
+      content,
+      timestamp,
+      hasSaveableContent: false,
+      saved: false,
+    });
+
+    // Fetch conversation history (last 50 messages)
+    const history = await storage.listChatMessages(parentId, parentType);
+    const recentHistory = history.slice(-50);
+
+    // Fetch system prompt from core_queries
+    const coreQuery = await storage.getCoreQuery(parentType);
+    const systemPrompt = coreQuery?.contextQuery || "";
+
+    // Build AI messages array
+    const aiMessages: AIMessage[] = [];
+    if (systemPrompt) {
+      aiMessages.push({ role: "system", content: systemPrompt });
+    }
+    for (const msg of recentHistory) {
+      aiMessages.push({
+        role: msg.role === "user" ? "user" : "assistant",
+        content: msg.content,
+      });
+    }
+
+    // Set up SSE
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+
+    let fullResponse = "";
+
+    try {
+      const provider = getAIProvider();
+      for await (const token of provider.streamCompletion(aiMessages)) {
+        fullResponse += token;
+        res.write(`data: ${JSON.stringify({ type: "token", text: token })}\n\n`);
+      }
+
+      // Save completed AI response
+      const aiTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const aiMessage = await storage.createChatMessage({
+        parentId,
+        parentType,
+        role: "ai",
+        content: fullResponse,
+        timestamp: aiTimestamp,
+        hasSaveableContent: true,
+        saved: false,
+      });
+
+      res.write(`data: ${JSON.stringify({ type: "done", userMessageId: userMessage.id, aiMessageId: aiMessage.id })}\n\n`);
+    } catch (err) {
+      const errorText = err instanceof Error ? err.message : "AI provider error";
+
+      // Save error as AI message
+      const errTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      await storage.createChatMessage({
+        parentId,
+        parentType,
+        role: "ai",
+        content: `Sorry, I encountered an error: ${errorText}`,
+        timestamp: errTimestamp,
+        hasSaveableContent: false,
+        saved: false,
+      });
+
+      res.write(`data: ${JSON.stringify({ type: "error", message: errorText })}\n\n`);
+    }
+
+    res.end();
   });
 
   // === ADMIN ROUTES ===

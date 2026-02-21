@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api, type ApiLabBucket, type ApiBucketItem, type ApiChatMessage } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, type ApiLabBucket, type ApiBucketItem } from "@/lib/api";
 import {
   DndContext,
   DragEndEvent,
@@ -28,7 +28,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import { SummaryCard } from "@/components/shared/SummaryCard";
 import { ScopedHistory } from "@/components/shared/ScopedHistory";
-import { useCoreQueries } from "@/hooks/use-core-queries";
+import { useChatStream } from "@/hooks/use-chat-stream";
 
 const ACCENT_COLORS = [
   "border-t-violet-400",
@@ -41,12 +41,67 @@ const ACCENT_COLORS = [
   "border-t-orange-400",
 ];
 
-type BucketWithMessages = Bucket & { bucketMessages: Message[] };
+function LabBucketChat({ bucketId }: { bucketId: string }) {
+  const queryClient = useQueryClient();
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  const { data: bucketMsgs } = useQuery({
+    queryKey: ["/api/messages", "lab_bucket", bucketId],
+    queryFn: () => api.messages.list("lab_bucket", bucketId),
+    enabled: !!bucketId,
+  });
+
+  useEffect(() => {
+    if (bucketMsgs) {
+      setMessages(bucketMsgs.map(m => ({
+        id: m.id,
+        role: m.role as "user" | "ai",
+        content: m.content,
+        timestamp: m.timestamp,
+        hasSaveableContent: m.hasSaveableContent,
+        saved: m.saved,
+      })));
+    }
+  }, [bucketMsgs]);
+
+  const { streamingMessage, isStreaming, sendMessage } = useChatStream({
+    parentId: bucketId,
+    parentType: "lab_bucket",
+  });
+
+  const displayMessages = useMemo(() => {
+    const result = [...messages];
+    if (streamingMessage) result.push(streamingMessage);
+    return result;
+  }, [messages, streamingMessage]);
+
+  const handleSend = (content: string) => {
+    const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    setMessages(prev => [...prev, {
+      id: `local-${Date.now()}`,
+      role: "user" as const,
+      content,
+      timestamp,
+    }]);
+    sendMessage(content);
+  };
+
+  return (
+    <ChatWorkspace
+      messages={displayMessages}
+      onSendMessage={handleSend}
+      isStreaming={isStreaming}
+      className="h-full"
+    />
+  );
+}
+
+type LocalBucket = Bucket;
 
 export default function LabPage() {
-  const { prependContext } = useCoreQueries();
+  const queryClient = useQueryClient();
   const [activeProject, setActiveProject] = useState(getSelectedProject());
-  const [buckets, setBuckets] = useState<BucketWithMessages[]>([]);
+  const [buckets, setBuckets] = useState<LocalBucket[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const bucketRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -76,6 +131,17 @@ export default function LabPage() {
     }
   }, [apiPageMessages]);
 
+  const { streamingMessage, isStreaming, sendMessage: sendPageMessage } = useChatStream({
+    parentId: activeProject.id,
+    parentType: "lab_page",
+  });
+
+  const displayMessages = useMemo(() => {
+    const result = [...messages];
+    if (streamingMessage) result.push(streamingMessage);
+    return result;
+  }, [messages, streamingMessage]);
+
   useEffect(() => {
     if (!apiBuckets || !Array.isArray(apiBuckets)) return;
 
@@ -88,7 +154,6 @@ export default function LabPage() {
           name: ab.name,
           items: existing?.items || [],
           isOpen: existing?.isOpen || false,
-          bucketMessages: existing?.bucketMessages || [],
         };
       });
     });
@@ -108,23 +173,6 @@ export default function LabPage() {
               url: i.url || undefined,
               fileName: i.fileName || undefined,
               fileSizeLabel: i.fileSizeLabel || undefined,
-            })),
-          };
-        }));
-      }).catch(() => {});
-
-      api.messages.list("lab_bucket", ab.id).then(msgs => {
-        setBuckets(prev => prev.map(b => {
-          if (b.id !== ab.id) return b;
-          return {
-            ...b,
-            bucketMessages: msgs.map(m => ({
-              id: m.id,
-              role: m.role as 'user' | 'ai',
-              content: m.content,
-              timestamp: m.timestamp,
-              hasSaveableContent: m.hasSaveableContent,
-              saved: m.saved,
             })),
           };
         }));
@@ -260,7 +308,6 @@ export default function LabPage() {
                   name,
                   isOpen: true,
                   items: [],
-                  bucketMessages: [],
                 },
                 ...prev,
               ]);
@@ -294,24 +341,18 @@ export default function LabPage() {
         }
         chatContent={
             <ChatWorkspace
-                messages={messages}
+                messages={displayMessages}
                 onSendMessage={(content) => {
-                  const userMsg: Message = {
-                    id: Date.now().toString(),
-                    role: "user",
+                  const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                  setMessages(prev => [...prev, {
+                    id: `local-${Date.now()}`,
+                    role: "user" as const,
                     content,
-                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                  };
-                  setMessages(prev => [...prev, userMsg]);
-
-                  api.messages.create({
-                    parentId: activeProject.id,
-                    parentType: "lab_page",
-                    role: "user",
-                    content: prependContext("lab_page", content),
-                    timestamp: userMsg.timestamp,
-                  }).catch(() => {});
+                    timestamp,
+                  }]);
+                  sendPageMessage(content);
                 }}
+                isStreaming={isStreaming}
                 saveDestinations={buckets.map((b) => ({ id: b.id, label: b.name }))}
                 onSaveContent={(messageId, destinationId) => {
                     const msg = messages.find((m) => m.id === messageId);
@@ -478,57 +519,8 @@ export default function LabPage() {
                                             <div className="w-[60%] border-r border-border/50">
                                                 <div className="h-full flex flex-col">
                                                     <div className="flex-1 min-h-0">
-                                                        <ChatWorkspace
-                                                            messages={(bucket.bucketMessages || []) as any}
-                                                            onSendMessage={(content) => {
-                                                                const userMsg: Message = {
-                                                                    id: Date.now().toString(),
-                                                                    role: "user",
-                                                                    content,
-                                                                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                                                                };
-
-                                                                const contextLines = [
-                                                                    `Bucket: ${bucket.name}`,
-                                                                    "Attachments:",
-                                                                    ...((bucket.items || []).slice(0, 8).map((i) => `- [${i.type}] ${i.title}`)),
-                                                                ].filter(Boolean);
-
-                                                                const aiMsg: Message = {
-                                                                    id: (Date.now() + 1).toString(),
-                                                                    role: "ai",
-                                                                    content: `Got it. I'm only using this bucket's context:\n\n${contextLines.join("\n")}\n\nYou said: ${content}`,
-                                                                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                                                                };
-
-                                                                setBuckets((prev) =>
-                                                                    prev.map((b) =>
-                                                                        b.id === bucket.id
-                                                                            ? {
-                                                                                  ...b,
-                                                                                  bucketMessages: [...(b.bucketMessages || []), userMsg, aiMsg],
-                                                                              }
-                                                                            : b
-                                                                    )
-                                                                );
-
-                                                                api.messages.create({
-                                                                  parentId: bucket.id,
-                                                                  parentType: "lab_bucket",
-                                                                  role: "user",
-                                                                  content: prependContext("lab_bucket", content),
-                                                                  timestamp: userMsg.timestamp,
-                                                                }).catch(() => {});
-
-                                                                api.messages.create({
-                                                                  parentId: bucket.id,
-                                                                  parentType: "lab_bucket",
-                                                                  role: "ai",
-                                                                  content: aiMsg.content,
-                                                                  timestamp: aiMsg.timestamp,
-                                                                }).catch(() => {});
-                                                            }}
-                                                            className="h-full"
+                                                        <LabBucketChat
+                                                            bucketId={bucket.id}
                                                         />
                                                     </div>
                                                 </div>
