@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 import { supabase } from "@/lib/supabase";
+import type { Session } from "@supabase/supabase-js";
 import { API_BASE_URL } from "@/lib/config";
 
 async function fetchAppUser(): Promise<User | null> {
@@ -47,20 +48,19 @@ async function syncUser(): Promise<void> {
 
 export function useAuth() {
   const queryClient = useQueryClient();
-
-  const { data: user, isLoading } = useQuery<User | null>({
-    queryKey: ["/api/auth/user"],
-    queryFn: fetchAppUser,
-    retry: false,
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnWindowFocus: true,
-    refetchOnMount: "always",
-  });
+  const [session, setSession] = useState<Session | null>(null);
+  const [isSessionLoading, setIsSessionLoading] = useState(true);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setIsSessionLoading(false);
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event) => {
+      async (event, newSession) => {
+        setSession(newSession);
+        
         if (event === "SIGNED_IN") {
           await syncUser();
           queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
@@ -75,6 +75,17 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
+  const { data: user, isLoading: isUserLoading } = useQuery<User | null>({
+    queryKey: ["/api/auth/user"],
+    queryFn: fetchAppUser,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    enabled: !!session,
+  });
+
   const logout = async (): Promise<void> => {
     await supabase.auth.signOut();
     queryClient.setQueryData(["/api/auth/user"], null);
@@ -83,8 +94,8 @@ export function useAuth() {
 
   return {
     user: user ?? null,
-    isLoading,
-    isAuthenticated: !!user,
+    isLoading: isSessionLoading,
+    isAuthenticated: !!session,
     logout,
   };
 }
